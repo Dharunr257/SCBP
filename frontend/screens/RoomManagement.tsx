@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { Classroom, User, UserRole, LogAction, RoomBlock } from '../types';
 import { PlusIcon, TrashIcon, CloseIcon } from '../components/Icons';
 import { PERIODS } from '../constants';
+import { Spinner } from '../components/Spinner';
 
 interface BlockRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (blockData: Omit<RoomBlock, '_id' | 'userId'>) => void;
+  onSave: (blockData: Omit<RoomBlock, '_id' | 'userId'>) => Promise<void>;
   classrooms: Classroom[];
   currentUser: User;
 }
@@ -19,17 +20,20 @@ const BlockRoomModal: React.FC<BlockRoomModalProps> = ({ isOpen, onClose, onSave
     const [periods, setPeriods] = useState<number[]>([]);
     const [reason, setReason] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const todayStr = new Date().toISOString().split('T')[0];
     
     if (!isOpen) return null;
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!classroomId || !date || periods.length === 0 || !reason) {
             setError('All fields are required.');
             return;
         }
-        onSave({ classroomId: classroomId, date, periods, reason });
+        setLoading(true);
+        await onSave({ classroomId: classroomId, date, periods, reason });
+        setLoading(false);
         onClose();
         // Reset state
         setClassroomId('');
@@ -86,7 +90,9 @@ const BlockRoomModal: React.FC<BlockRoomModalProps> = ({ isOpen, onClose, onSave
                 </div>
                 <div className="flex justify-end pt-6">
                     <button onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                    <button onClick={handleSave} className="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600">Block Room</button>
+                    <button onClick={handleSave} disabled={loading} className="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 w-32 flex justify-center items-center disabled:bg-gray-400">
+                        {loading ? <Spinner size="sm" color="text-white" /> : 'Block Room'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -99,16 +105,19 @@ interface RoomManagementProps {
   classrooms: Classroom[];
   roomBlocks: RoomBlock[];
   users: User[];
-  onUpdateClassroom: (classroom: Classroom) => void;
-  onAddBlock: (blockData: Omit<RoomBlock, '_id' | 'userId'>) => void;
-  onDeleteBlock: (blockId: string) => void;
-  onAddClassroom: (name: string) => void;
-  onDeleteClassroom: (classroomId: string) => void;
+  onUpdateClassroom: (classroom: Classroom) => Promise<void>;
+  onAddBlock: (blockData: Omit<RoomBlock, '_id' | 'userId'>) => Promise<void>;
+  onDeleteBlock: (blockId: string) => Promise<void>;
+  onAddClassroom: (name: string) => Promise<void>;
+  onDeleteClassroom: (classroomId: string) => Promise<void>;
 }
 
 const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms, roomBlocks, users, onUpdateClassroom, onAddBlock, onDeleteBlock, onAddClassroom, onDeleteClassroom }) => {
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
+  const [isAddingRoom, setIsAddingRoom] = useState(false);
+  const [actionsLoading, setActionsLoading] = useState<{[key: string]: boolean}>({});
+
   
   if (![UserRole.Principal, UserRole.Dean].includes(currentUser.role)) {
     return (
@@ -119,23 +128,35 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
     );
   }
 
-  const handleToggleMaintenance = (room: Classroom) => {
+  const handleToggleMaintenance = async (room: Classroom) => {
+    setActionsLoading(prev => ({...prev, [`status-${room._id}`]: true}));
     const newStatus = room.status === 'available' ? 'maintenance' : 'available';
-    onUpdateClassroom({ ...room, status: newStatus });
+    await onUpdateClassroom({ ...room, status: newStatus });
+    setActionsLoading(prev => ({...prev, [`status-${room._id}`]: false}));
   };
   
-  const handleAddNewRoom = (e: React.FormEvent) => {
+  const handleAddNewRoom = async (e: React.FormEvent) => {
       e.preventDefault();
       if (newRoomName.trim()) {
-          onAddClassroom(newRoomName.trim());
+          setIsAddingRoom(true);
+          await onAddClassroom(newRoomName.trim());
           setNewRoomName('');
+          setIsAddingRoom(false);
       }
   };
   
-  const handleDeleteRoom = (id: string, name: string) => {
+  const handleDeleteRoom = async (id: string, name: string) => {
       if (window.confirm(`Are you sure you want to delete "${name}"? This action is irreversible and will remove all associated bookings and blocks.`)) {
-          onDeleteClassroom(id);
+          setActionsLoading(prev => ({...prev, [`delete-room-${id}`]: true}));
+          await onDeleteClassroom(id);
+          setActionsLoading(prev => ({...prev, [`delete-room-${id}`]: false}));
       }
+  }
+
+  const handleDeleteBlockAction = async (id: string) => {
+    setActionsLoading(prev => ({...prev, [`delete-block-${id}`]: true}));
+    await onDeleteBlock(id);
+    setActionsLoading(prev => ({...prev, [`delete-block-${id}`]: false}));
   }
 
   return (
@@ -149,9 +170,8 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
                     <label htmlFor="new-room-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Classroom Name</label>
                     <input id="new-room-name" type="text" value={newRoomName} onChange={e => setNewRoomName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
                 </div>
-                <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 h-[42px]">
-                    <PlusIcon className="h-5 w-5" />
-                    <span>Add Room</span>
+                <button type="submit" disabled={isAddingRoom} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 h-[42px] w-36 disabled:bg-gray-400">
+                    {isAddingRoom ? <Spinner size="sm" color="text-white"/> : <><PlusIcon className="h-5 w-5" /><span>Add Room</span></>}
                 </button>
             </form>
         </div>
@@ -185,11 +205,11 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
                     </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button onClick={() => handleToggleMaintenance(room)} className={`font-bold py-1 px-3 rounded-lg text-xs ${room.status === 'available' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-green-500 hover:bg-green-600 text-white'}`}>
-                            {room.status === 'available' ? 'Set Maintenance' : 'Set Available'}
+                        <button onClick={() => handleToggleMaintenance(room)} disabled={actionsLoading[`status-${room._id}`]} className={`font-bold py-1 px-3 rounded-lg text-xs w-32 h-7 flex justify-center items-center ${room.status === 'available' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-green-500 hover:bg-green-600 text-white'} disabled:bg-gray-400`}>
+                            {actionsLoading[`status-${room._id}`] ? <Spinner size="sm" color="text-white"/> : (room.status === 'available' ? 'Set Maintenance' : 'Set Available')}
                         </button>
-                        <button onClick={() => handleDeleteRoom(room._id, room.name)} className="font-bold py-1 px-3 rounded-lg text-xs bg-red-500 hover:bg-red-600 text-white">
-                            Delete
+                        <button onClick={() => handleDeleteRoom(room._id, room.name)} disabled={actionsLoading[`delete-room-${room._id}`]} className="font-bold py-1 px-3 rounded-lg text-xs bg-red-500 hover:bg-red-600 text-white w-20 h-7 flex justify-center items-center disabled:bg-gray-400">
+                            {actionsLoading[`delete-room-${room._id}`] ? <Spinner size="sm" color="text-white"/> : 'Delete'}
                         </button>
                     </td>
                 </tr>
@@ -227,7 +247,9 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{block.reason}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user?.name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => onDeleteBlock(block._id)} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400">Remove Block</button>
+                                    <button onClick={() => handleDeleteBlockAction(block._id)} disabled={actionsLoading[`delete-block-${block._id}`]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 w-28 h-7 flex justify-center items-center disabled:text-gray-400">
+                                        {actionsLoading[`delete-block-${block._id}`] ? <Spinner size="sm" /> : 'Remove Block'}
+                                    </button>
                                 </td>
                             </tr>
                         )

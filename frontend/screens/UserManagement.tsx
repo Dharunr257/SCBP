@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CloseIcon } from '../components/Icons';
+import { Spinner } from '../components/Spinner';
 
 interface EditUserModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (user: User) => void;
+    onSave: (user: User) => Promise<void>;
     user: User | null;
     currentUser: User;
 }
@@ -17,6 +18,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
     const [department, setDepartment] = useState('');
     const [role, setRole] = useState<UserRole>(UserRole.Faculty);
     const [isIqacDean, setIsIqacDean] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -30,9 +32,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
 
     if (!isOpen || !user) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...user, name, email, department, role, isIqacDean });
+        setLoading(true);
+        await onSave({ ...user, name, email, department, role, isIqacDean });
+        setLoading(false);
         onClose();
     };
     
@@ -81,7 +85,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
                     )}
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                        <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Save Changes</button>
+                        <button type="submit" disabled={loading} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 w-36 h-10 flex justify-center items-center disabled:bg-gray-400">
+                            {loading ? <Spinner size="sm" color="text-white" /> : 'Save Changes'}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -93,9 +99,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
 interface UserManagementProps {
   currentUser: User;
   users: User[];
-  onAddUser: (user: Omit<User, '_id' | 'password'>) => void;
-  onUpdateUser: (user: User) => void;
-  onDeleteUser: (userId: string) => void;
+  onAddUser: (user: Omit<User, '_id' | 'password'>) => Promise<void>;
+  onUpdateUser: (user: User) => Promise<void>;
+  onDeleteUser: (userId: string) => Promise<void>;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onAddUser, onUpdateUser, onDeleteUser }) => {
@@ -105,6 +111,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
   const [isIqacDean, setIsIqacDean] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [actionsLoading, setActionsLoading] = useState<{[key: string]: boolean}>({});
 
   const facultyAccountExists = useMemo(() => users.some(user => user.role === UserRole.Faculty), [users]);
 
@@ -140,10 +148,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
     );
   }
     
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !department || !role) return;
-    onAddUser({ name, email, department, role, isIqacDean });
+    setIsAddingUser(true);
+    await onAddUser({ name, email, department, role, isIqacDean });
+    setIsAddingUser(false);
     setName('');
     setEmail('');
     setDepartment('');
@@ -158,11 +168,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
       setIsEditModalOpen(true);
   }
 
-  const handleDeleteClick = (userId: string, userName: string) => {
+  const handleDeleteClick = async (userId: string, userName: string) => {
       if(window.confirm(`Are you sure you want to delete the user "${userName}"?`)) {
-          onDeleteUser(userId);
+          setActionsLoading(prev => ({ ...prev, [userId]: true }));
+          await onDeleteUser(userId);
+          setActionsLoading(prev => ({ ...prev, [userId]: false }));
       }
   }
+
+  const handleUpdateUserAction = async (user: User) => {
+    await onUpdateUser(user);
+  };
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 dark:bg-dark-bg min-h-full">
@@ -210,9 +226,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
                 </div>
             )}
             <div className="mt-6 flex justify-end">
-                <button type="submit" disabled={availableRoles.length === 0} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 disabled:bg-gray-500 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
-                    <PlusIcon className="h-5 w-5" />
-                    <span>Add User</span>
+                <button type="submit" disabled={availableRoles.length === 0 || isAddingUser} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 disabled:bg-gray-500 dark:disabled:bg-gray-600 disabled:cursor-not-allowed w-32 h-10">
+                    {isAddingUser ? <Spinner size="sm" color="text-white"/> : <><PlusIcon className="h-5 w-5" /> <span>Add User</span></>}
                 </button>
             </div>
         </form>
@@ -270,8 +285,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
                             </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
-                                <button onClick={() => handleEditClick(user)} disabled={!canEdit} className="text-primary dark:text-primary-dark hover:underline inline-flex items-center disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed disabled:no-underline"><EditIcon className="w-4 h-4 mr-1"/>Edit</button>
-                                <button onClick={() => handleDeleteClick(user._id, user.name)} disabled={!canDelete} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed inline-flex items-center"><TrashIcon className="w-4 h-4 mr-1"/>Delete</button>
+                                <button onClick={() => handleEditClick(user)} disabled={!canEdit || actionsLoading[user._id]} className="text-primary dark:text-primary-dark hover:underline inline-flex items-center disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed disabled:no-underline"><EditIcon className="w-4 h-4 mr-1"/>Edit</button>
+                                <button onClick={() => handleDeleteClick(user._id, user.name)} disabled={!canDelete || actionsLoading[user._id]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed inline-flex items-center w-20 h-7 justify-center">
+                                  {actionsLoading[user._id] ? <Spinner size='sm'/> : <><TrashIcon className="w-4 h-4 mr-1"/>Delete</>}
+                                </button>
                             </td>
                         </tr>
                     )
@@ -283,7 +300,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
       <EditUserModal 
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSave={onUpdateUser}
+        onSave={handleUpdateUserAction}
         user={userToEdit}
         currentUser={currentUser}
       />

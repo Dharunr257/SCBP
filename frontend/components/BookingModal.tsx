@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Booking, Classroom, User, UserRole } from '../types';
 import { CloseIcon } from './Icons';
 import { PERIODS, formatTime12h } from '../constants';
+import { Spinner } from './Spinner';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -208,7 +209,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
           <div className="flex justify-end pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
             {isEditable &&
-              <button type="submit" disabled={loading || currentUser.role === UserRole.Faculty} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 disabled:bg-gray-500">{loading ? 'Saving...' : (bookingToEdit ? 'Update' : requiresApproval ? 'Request Booking' : 'Book')}</button>
+              <button type="submit" disabled={loading || currentUser.role === UserRole.Faculty} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 disabled:bg-gray-500 w-36 text-center">
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <Spinner size="sm" color="text-white" />
+                    <span className="ml-2">Saving...</span>
+                  </span>
+                ) : (bookingToEdit ? 'Update' : requiresApproval ? 'Request Booking' : 'Book')}
+              </button>
             }
           </div>
         </form>

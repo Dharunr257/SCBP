@@ -22,10 +22,13 @@ import Waitlist from './screens/Waitlist';
 import ApprovalRequests from './screens/ApprovalRequests';
 import { BookingModal } from './components/BookingModal';
 import NotificationCenter from './components/Notification';
+import { Spinner } from './components/Spinner';
 
 interface ToastNotification extends Omit<AppNotification, '_id' | 'timestamp' | 'read' | 'userId'> {
     id: number;
 }
+
+type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
     // State
@@ -34,6 +37,7 @@ const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeView, setActiveView] = useState('Dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [theme, setTheme] = useState<Theme>('light');
 
     // Data states
     const [users, setUsers] = useState<User[]>([]);
@@ -54,6 +58,27 @@ const App: React.FC = () => {
 
     const isApprovalEnabled = useMemo(() => settings.find(s => s.key === 'deanApprovalRequired')?.value === 'true', [settings]);
     
+    // Theme logic
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('theme') as Theme | null;
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+        setTheme(initialTheme);
+    }, []);
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const handleThemeToggle = () => {
+        setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+    };
+
     const showToast = useCallback((message: string, type: 'success' | 'info' | 'error') => {
         const newToast: ToastNotification = { id: Date.now(), message, type };
         setToastNotifications(prev => [...prev, newToast]);
@@ -360,7 +385,11 @@ const App: React.FC = () => {
     };
     
     if (isLoading) {
-        return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-white">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-dark-bg">
+                <Spinner size="lg" />
+            </div>
+        );
     }
     
     if (!currentUser) {
@@ -472,6 +501,8 @@ const App: React.FC = () => {
                     notifications={notifications}
                     unreadCount={unreadNotifications.length}
                     onMarkNotificationsAsRead={() => {}}
+                    theme={theme}
+                    onThemeToggle={handleThemeToggle}
                 />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto pb-16 md:pb-0">
                     {renderActiveView()}

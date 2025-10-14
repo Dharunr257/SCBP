@@ -1,7 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Booking, User, Classroom, UserRole, WaitlistEntry } from '../types';
 import { formatTime12h } from '../constants';
+import { Spinner } from '../components/Spinner';
 
 interface DashboardProps {
   currentUser: User;
@@ -10,8 +11,9 @@ interface DashboardProps {
   waitlist: WaitlistEntry[];
   users: User[];
   onQuickBook: () => void;
-  onApproveBooking: (bookingId: string) => void;
-  onDeclineBooking: (bookingId: string) => void;
+  // FIX: onApproveBooking and onDeclineBooking are async functions, so their types must be updated to return a Promise.
+  onApproveBooking: (bookingId: string) => Promise<void>;
+  onDeclineBooking: (bookingId: string) => Promise<void>;
   isApprovalEnabled: boolean;
 }
 
@@ -93,32 +95,53 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
 const ApprovalDashboard: React.FC<{
     pendingBookings: Booking[],
     users: User[],
-    onApprove: (id: string) => void,
-    onDecline: (id: string) => void
-}> = ({ pendingBookings, users, onApprove, onDecline }) => (
-    <DashboardCard title="Pending Booking Approvals" className="lg:col-span-4">
-        <div className="space-y-3 max-h-72 overflow-y-auto">
-            {pendingBookings.length > 0 ? pendingBookings.map(b => {
-                const user = users.find(u => u._id === b.userId);
-                return (
-                    <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                        <div>
-                            <p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Requested by {user?.name} ({user?.department}) for {new Date(b.date).toLocaleDateString()}
-                            </p>
+    onApprove: (id: string) => Promise<void>,
+    onDecline: (id: string) => Promise<void>
+}> = ({ pendingBookings, users, onApprove, onDecline }) => {
+    const [loadingAction, setLoadingAction] = useState<{type: 'approve' | 'decline', id: string} | null>(null);
+
+    const handleApprove = async (id: string) => {
+        setLoadingAction({ type: 'approve', id });
+        await onApprove(id);
+        setLoadingAction(null);
+    }
+
+    const handleDecline = async (id: string) => {
+        setLoadingAction({ type: 'decline', id });
+        await onDecline(id);
+        setLoadingAction(null);
+    }
+    
+    return (
+        <DashboardCard title="Pending Booking Approvals" className="lg:col-span-4">
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+                {pendingBookings.length > 0 ? pendingBookings.map(b => {
+                    const user = users.find(u => u._id === b.userId);
+                    const isLoading = loadingAction?.id === b._id;
+                    return (
+                        <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Requested by {user?.name} ({user?.department}) for {new Date(b.date).toLocaleDateString()}
+                                </p>
+                            </div>
+                            <div className="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
+                                 <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{`P${b.period}`}</span>
+                                 <button onClick={() => handleDecline(b._id)} disabled={isLoading} className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-lg w-20 h-6 flex items-center justify-center disabled:bg-gray-400">
+                                    {isLoading && loadingAction?.type === 'decline' ? <Spinner size="sm" color="text-white"/> : 'Decline'}
+                                 </button>
+                                 <button onClick={() => handleApprove(b._id)} disabled={isLoading} className="bg-green-500 hover:bg-green-600 text-white font-bold text-xs py-1 px-3 rounded-lg w-20 h-6 flex items-center justify-center disabled:bg-gray-400">
+                                    {isLoading && loadingAction?.type === 'approve' ? <Spinner size="sm" color="text-white"/> : 'Approve'}
+                                 </button>
+                            </div>
                         </div>
-                        <div className="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
-                             <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{`P${b.period}`}</span>
-                             <button onClick={() => onDecline(b._id)} className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-lg">Decline</button>
-                             <button onClick={() => onApprove(b._id)} className="bg-green-500 hover:bg-green-600 text-white font-bold text-xs py-1 px-3 rounded-lg">Approve</button>
-                        </div>
-                    </div>
-                )
-            }) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No pending approvals.</p>}
-        </div>
-    </DashboardCard>
-);
+                    )
+                }) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No pending approvals.</p>}
+            </div>
+        </DashboardCard>
+    );
+};
 
 
 const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms, users, onQuickBook, onApproveBooking, onDeclineBooking, isApprovalEnabled }) => {
@@ -130,7 +153,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
   
   const totalBookings = bookings.filter(b => b.status === 'confirmed').length;
   const availableRooms = classrooms.filter(c => c.status === 'available').length;
-  const blockedRooms = classrooms.filter(c => c.status === 'maintenance');
   
   const pendingBookings = useMemo(() => bookings.filter(b => b.status === 'pending').sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()), [bookings]);
 

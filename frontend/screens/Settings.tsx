@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Setting, UserRole } from '../types';
+import { Spinner } from '../components/Spinner';
 
 interface SettingsProps {
     currentUser: User;
@@ -17,12 +18,14 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [passwordSuccess, setPasswordSuccess] = useState('');
+    const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
     // Profile State
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
+    const [isProfileLoading, setIsProfileLoading] = useState(false);
 
     const approvalSetting = settings.find(s => s.key === 'deanApprovalRequired');
     const isApprovalEnabled = approvalSetting?.value === 'true';
@@ -38,13 +41,16 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
         e.preventDefault();
         setPasswordError('');
         setPasswordSuccess('');
+        setIsPasswordLoading(true);
 
         if (newPassword !== confirmPassword) {
             setPasswordError('New passwords do not match.');
+            setIsPasswordLoading(false);
             return;
         }
 
         const result = await onChangePassword(currentPassword, newPassword);
+        setIsPasswordLoading(false);
 
         if (result.success) {
             setPasswordSuccess(result.message);
@@ -60,8 +66,10 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
         e.preventDefault();
         setProfileError('');
         setProfileSuccess('');
+        setIsProfileLoading(true);
 
         const result = await onUpdateProfile({ name, email });
+        setIsProfileLoading(false);
         
         if (result.success) {
             setProfileSuccess(result.message);
@@ -114,7 +122,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
                {profileError && <p className="text-red-500 text-sm">{profileError}</p>}
                {profileSuccess && <p className="text-green-500 text-sm">{profileSuccess}</p>}
               <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Update Profile</button>
+                <button type="submit" disabled={isProfileLoading} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 w-36 h-10 flex justify-center items-center disabled:bg-gray-400">
+                    {isProfileLoading ? <Spinner size="sm" color="text-white"/> : "Update Profile"}
+                </button>
               </div>
             </form>
           </div>
@@ -137,7 +147,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
                {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
                {passwordSuccess && <p className="text-green-500 text-sm">{passwordSuccess}</p>}
               <div className="flex justify-end pt-2">
-                <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Update Password</button>
+                <button type="submit" disabled={isPasswordLoading} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 w-40 h-10 flex justify-center items-center disabled:bg-gray-400">
+                    {isPasswordLoading ? <Spinner size="sm" color="text-white"/> : "Update Password"}
+                </button>
               </div>
             </form>
           </div>

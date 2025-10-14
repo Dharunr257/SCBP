@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, Notification } from '../types';
-import { CollegeLogo, BellIcon, MenuIcon, CloseIcon } from './Icons';
+import { CollegeLogo, BellIcon, MenuIcon, CloseIcon, SunIcon, MoonIcon } from './Icons';
 
 interface HeaderProps {
   user: User;
@@ -11,6 +11,8 @@ interface HeaderProps {
   notifications: Notification[];
   unreadCount: number;
   onMarkNotificationsAsRead: () => void;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
 }
 
 const NotificationPanel: React.FC<{ notifications: Notification[], onClose: () => void }> = ({ notifications, onClose }) => {
@@ -39,7 +41,7 @@ const NotificationPanel: React.FC<{ notifications: Notification[], onClose: () =
 };
 
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar, notifications, unreadCount, onMarkNotificationsAsRead }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar, notifications, unreadCount, onMarkNotificationsAsRead, theme, onThemeToggle }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   const handleToggleNotifications = () => {
@@ -60,7 +62,14 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar,
           SmartClass Booking
         </h1>
       </div>
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={onThemeToggle}
+          className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6" />}
+        </button>
         <div className="relative">
             <button onClick={handleToggleNotifications} className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary-dark transition-colors relative">
                 <BellIcon className="h-6 w-6" />

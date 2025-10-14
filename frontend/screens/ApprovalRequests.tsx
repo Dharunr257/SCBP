@@ -1,18 +1,34 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Booking, Classroom, User, UserRole } from '../types';
 import { formatTime12h, PERIODS } from '../constants';
+import { Spinner } from '../components/Spinner';
 
 interface ApprovalRequestsProps {
     currentUser: User;
     bookings: Booking[];
     classrooms: Classroom[];
     users: User[];
-    onApproveBooking: (bookingId: string) => void;
-    onDeclineBooking: (bookingId: string) => void;
+    // FIX: onApproveBooking and onDeclineBooking are async functions, so their types must be updated to return a Promise to allow 'await'.
+    onApproveBooking: (bookingId: string) => Promise<void>;
+    onDeclineBooking: (bookingId: string) => Promise<void>;
 }
 
 const ApprovalRequests: React.FC<ApprovalRequestsProps> = ({ currentUser, bookings, classrooms, users, onApproveBooking, onDeclineBooking }) => {
+    const [loadingAction, setLoadingAction] = useState<{type: 'approve' | 'decline', id: string} | null>(null);
+
+    const handleApprove = async (id: string) => {
+        setLoadingAction({ type: 'approve', id });
+        await onApproveBooking(id);
+        setLoadingAction(null);
+    }
+
+    const handleDecline = async (id: string) => {
+        setLoadingAction({ type: 'decline', id });
+        await onDeclineBooking(id);
+        setLoadingAction(null);
+    }
+
     const pendingBookings = useMemo(() => {
         return bookings
             .filter(b => b.status === 'pending')
@@ -64,6 +80,7 @@ const ApprovalRequests: React.FC<ApprovalRequestsProps> = ({ currentUser, bookin
                                 <div className="divide-y dark:divide-dark-border">
                                     {requestGroup.map(booking => {
                                         const user = users.find(u => u._id === booking.userId);
+                                        const isLoading = loadingAction?.id === booking._id;
                                         return (
                                             <div key={booking._id} className="p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                                 <div className='flex-grow'>
@@ -76,8 +93,12 @@ const ApprovalRequests: React.FC<ApprovalRequestsProps> = ({ currentUser, bookin
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center space-x-2 self-end md:self-center flex-shrink-0">
-                                                    <button onClick={() => onDeclineBooking(booking._id)} className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors">Decline</button>
-                                                    <button onClick={() => onApproveBooking(booking._id)} className="bg-green-500 hover:bg-green-600 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors">Approve</button>
+                                                    <button onClick={() => handleDecline(booking._id)} disabled={isLoading} className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors w-24 h-8 flex justify-center items-center disabled:bg-gray-400">
+                                                        {isLoading && loadingAction?.type === 'decline' ? <Spinner size="sm" color="text-white" /> : 'Decline'}
+                                                    </button>
+                                                    <button onClick={() => handleApprove(booking._id)} disabled={isLoading} className="bg-green-500 hover:bg-green-600 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors w-24 h-8 flex justify-center items-center disabled:bg-gray-400">
+                                                        {isLoading && loadingAction?.type === 'approve' ? <Spinner size="sm" color="text-white" /> : 'Approve'}
+                                                    </button>
                                                 </div>
                                             </div>
                                         );

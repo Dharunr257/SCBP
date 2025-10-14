@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CollegeLogo, EyeIcon, EyeOffIcon } from '../components/Icons';
+import { Spinner } from '../components/Spinner';
 
 interface LoginScreenProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -91,7 +92,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, error }) => {
               disabled={isLoading}
               className="relative flex justify-center w-full px-4 py-3 text-sm font-medium text-white border border-transparent rounded-md group bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-dark disabled:bg-gray-500 dark:bg-primary-dark dark:hover:bg-primary-dark/90 dark:focus:ring-offset-dark-card"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <Spinner size="sm" color="text-white" />
+                  <span className="ml-2">Signing in...</span>
+                </span>
+              ) : 'Sign in'}
             </button>
           </div>
         </form>
