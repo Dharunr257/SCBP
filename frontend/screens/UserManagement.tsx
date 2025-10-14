@@ -16,6 +16,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
     const [email, setEmail] = useState('');
     const [department, setDepartment] = useState('');
     const [role, setRole] = useState<UserRole>(UserRole.Faculty);
+    const [isIqacDean, setIsIqacDean] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -23,6 +24,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
             setEmail(user.email);
             setDepartment(user.department);
             setRole(user.role);
+            setIsIqacDean(!!user.isIqacDean);
         }
     }, [user]);
 
@@ -30,7 +32,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...user, name, email, department, role });
+        onSave({ ...user, name, email, department, role, isIqacDean });
         onClose();
     };
     
@@ -63,6 +65,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
                         </select>
                          {(!canChangeRole || user.role === UserRole.Principal || user.role === UserRole.Faculty) && <p className="text-xs text-gray-500 mt-1">Role cannot be changed for this user.</p>}
                     </div>
+                     {role === UserRole.Dean && canChangeRole && (
+                        <div>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isIqacDean}
+                                    onChange={e => setIsIqacDean(e.target.checked)}
+                                    className="h-4 w-4 rounded text-primary focus:ring-primary-dark"
+                                />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Set as IQAC Dean (Approval Authority)</span>
+                            </label>
+                             <p className="text-xs text-gray-500 mt-1">Checking this will remove the IQAC Dean role from any other user.</p>
+                        </div>
+                    )}
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
                         <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Save Changes</button>
@@ -86,6 +102,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
+  const [isIqacDean, setIsIqacDean] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
@@ -108,6 +125,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
     if (availableRoles.length > 0 && !availableRoles.includes(role)) {
       setRole(availableRoles[0]);
     }
+    // Reset IQAC Dean checkbox if role is not Dean
+    if (role !== UserRole.Dean) {
+      setIsIqacDean(false);
+    }
   }, [availableRoles, role]);
   
   if (![UserRole.Principal, UserRole.Dean].includes(currentUser.role)) {
@@ -122,10 +143,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !department || !role) return;
-    onAddUser({ name, email, department, role });
+    onAddUser({ name, email, department, role, isIqacDean });
     setName('');
     setEmail('');
     setDepartment('');
+    setIsIqacDean(false);
     if(availableRoles.length > 0) {
         setRole(availableRoles[0]);
     }
@@ -153,29 +175,46 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
                 <p>A general Faculty account already exists. The option to create another Faculty account is disabled.</p>
             </div>
         )}
-        <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-          <div className="lg:col-span-1">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
-            <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
-          </div>
-          <div className="lg:col-span-1">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
-          </div>
-          <div className="lg:col-span-1">
-            <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
-            <input id="department" type="text" value={department} onChange={e => setDepartment(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
-          </div>
-          <div className="lg:col-span-1">
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-            <select id="role" value={role} onChange={e => setRole(e.target.value as UserRole)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2">
-              {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <button type="submit" disabled={availableRoles.length === 0} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 w-full disabled:bg-gray-500 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
-            <PlusIcon className="h-5 w-5" />
-            <span>Add User</span>
-          </button>
+        <form onSubmit={handleAddUser}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+                <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                <input id="department" type="text" value={department} onChange={e => setDepartment(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <select id="role" value={role} onChange={e => setRole(e.target.value as UserRole)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2">
+                  {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            {currentUser.role === UserRole.Principal && role === UserRole.Dean && (
+                <div className="mt-4">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={isIqacDean}
+                            onChange={e => setIsIqacDean(e.target.checked)}
+                            className="h-4 w-4 rounded text-primary focus:ring-primary-dark"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Set as IQAC Dean (Approval Authority)</span>
+                    </label>
+                </div>
+            )}
+            <div className="mt-6 flex justify-end">
+                <button type="submit" disabled={availableRoles.length === 0} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 disabled:bg-gray-500 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+                    <PlusIcon className="h-5 w-5" />
+                    <span>Add User</span>
+                </button>
+            </div>
         </form>
       </div>
 
@@ -225,7 +264,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
                                 </span>
                                 {user.isIqacDean && (
                                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                        IQAC
+                                        IQAC Dean
                                     </span>
                                 )}
                             </div>

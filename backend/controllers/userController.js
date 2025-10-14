@@ -64,7 +64,7 @@ export const updateUserProfile = async (req, res) => {
 // @access  Private (Admin/Dean)
 export const createUser = async (req, res) => {
     try {
-        const { role } = req.body;
+        const { role, isIqacDean } = req.body;
 
         if (role === 'Faculty') {
             const facultyExists = await User.findOne({ role: 'Faculty' });
@@ -72,8 +72,19 @@ export const createUser = async (req, res) => {
                 return res.status(400).json({ message: 'A general Faculty account already exists. Cannot create another.' });
             }
         }
+        
+        // If the new user is set as IQAC Dean, unset any existing one.
+        if (isIqacDean && role === 'Dean') {
+            await User.updateMany({ isIqacDean: true }, { isIqacDean: false });
+        }
 
-        const newUser = await User.create(req.body);
+        const userData = { ...req.body };
+        // Ensure only a Dean can be an IQAC Dean
+        if (userData.role !== 'Dean') {
+            userData.isIqacDean = false;
+        }
+
+        const newUser = await User.create(userData);
         const userResponse = newUser.toObject();
         delete userResponse.password;
         await createLog(req.user, 'User Added', `Added new user: ${newUser.name} (${newUser.role})`);
@@ -88,13 +99,39 @@ export const createUser = async (req, res) => {
 // @access  Private (Admin/Dean)
 export const updateUser = async (req, res) => {
     try {
-        const { name, email, department, role } = req.body;
-        const updatedUser = await User.findByIdAndUpdate(req.params.id, { name, email, department, role }, { new: true }).select('-password');
+        const { name, email, department, role, isIqacDean } = req.body;
+        const userToUpdate = await User.findById(req.params.id);
+
+        if (!userToUpdate) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        const isRoleOrIqacChanged = (role && role !== userToUpdate.role) || (isIqacDean !== undefined && isIqacDean !== userToUpdate.isIqacDean);
+
+        if (isRoleOrIqacChanged && req.user.role !== 'Principal') {
+             return res.status(403).json({ message: 'Only the Principal can change user roles or IQAC status.' });
+        }
+
+        // If making this user the IQAC Dean, ensure no others are.
+        if (isIqacDean === true && role === 'Dean') {
+             await User.updateMany({ _id: { $ne: req.params.id }, isIqacDean: true }, { isIqacDean: false });
+        }
+
+        const updateData = { name, email, department, role, isIqacDean };
+        
+        // Ensure only Deans can be IQAC Deans
+        if (updateData.role !== 'Dean') {
+            updateData.isIqacDean = false;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
+
         if (updatedUser) {
             await createLog(req.user, 'User Edited', `Updated user details for ${updatedUser.name}`);
             res.json(updatedUser);
         } else {
-            res.status(404).json({ message: 'User not found' });
+            // This case should not be reached due to the initial check
+            res.status(404).json({ message: 'User not found during update' });
         }
     } catch (error) {
         res.status(400).json({ message: 'Error updating user' });
