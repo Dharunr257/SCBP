@@ -497,6 +497,7 @@ const App: React.FC = () => {
                     initialSlot={initialSlot}
                     isOverriding={isOverriding}
                     isApprovalEnabled={isApprovalEnabled}
+                    users={users}
                 />
             )}
             <NotificationCenter notifications={toastNotifications} />

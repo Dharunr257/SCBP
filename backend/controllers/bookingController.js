@@ -2,6 +2,14 @@
 import { Booking, Setting, User, Notification } from '../models.js';
 import { createLog } from '../utils/logger.js';
 
+const rolePower = {
+    'Principal': 4,
+    'Dean': 3,
+    'HOD': 2,
+    'Faculty': 1,
+};
+
+
 // @desc    Create or update a booking
 // @route   POST /api/bookings
 // @access  Private
@@ -11,16 +19,38 @@ export const createOrUpdateBooking = async (req, res) => {
         const isApprovalRequired = approvalSetting ? approvalSetting.value === 'true' : false;
 
         if (req.user.role === 'Faculty') {
-            return res.status(403).json({ message: 'Faculty members do not have permission to create bookings.' });
+            return res.status(403).json({ message: 'Faculty members do not have permission to create or edit bookings.' });
         }
 
         if (req.body._id) { // Editing
              const { _id, periods, ...updateData } = req.body;
-             // Editing logic remains simple: update the existing booking.
-             // Complex approval for edits is not part of this scope.
+             const bookingToEdit = await Booking.findById(_id);
+
+             if (!bookingToEdit) {
+                return res.status(404).json({ message: 'Booking not found.' });
+             }
+
+             const originalOwner = await User.findById(bookingToEdit.userId);
+             if (!originalOwner) {
+                // This case might happen if user was deleted. Still, we should block.
+                return res.status(404).json({ message: 'Original owner of the booking not found.' });
+             }
+
+             const isOwner = bookingToEdit.userId.toString() === req.user._id.toString();
+             const isPrincipal = req.user.role === 'Principal';
+             const isIqacDean = req.user.isIqacDean;
+             const hasRoleSuperiority = rolePower[req.user.role] > rolePower[originalOwner.role];
+
+             if (!isOwner && !isPrincipal && !isIqacDean && !hasRoleSuperiority) {
+                 return res.status(403).json({ message: 'You are not authorized to edit this booking.' });
+             }
+             
+             // The frontend sends `period`, `startTime`, `endTime` in the payload for edits.
+             // We can just use the updateData sent from the client.
              const updatedBooking = await Booking.findByIdAndUpdate(_id, updateData, { new: true });
              await createLog(req.user, 'Edited', `Edited booking for subject ${updatedBooking.subject}`);
              res.status(200).json(updatedBooking);
+
         } else { // Creating new bookings
             let status = 'confirmed';
             if (isApprovalRequired && req.user.role !== 'Principal' && !req.user.isIqacDean) {

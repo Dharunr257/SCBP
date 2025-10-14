@@ -41,6 +41,23 @@ const getMonthCalendarDays = (date: Date): Date[] => {
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
 
+const canEditBooking = (currentUser: User, booking: Booking, users: User[]): boolean => {
+    const bookingOwner = users.find(u => u._id === booking.userId);
+    if (!bookingOwner) return false;
+
+    if (currentUser._id === booking.userId) return true;
+    if (currentUser.role === UserRole.Principal || currentUser.isIqacDean) return true;
+
+    const rolePower = {
+        [UserRole.Principal]: 4,
+        [UserRole.Dean]: 3,
+        [UserRole.HOD]: 2,
+        [UserRole.Faculty]: 1,
+    };
+
+    return rolePower[currentUser.role] > rolePower[bookingOwner.role];
+};
+
 const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarView>('Daily');
@@ -178,17 +195,24 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             const user = users.find(u => u._id === booking.userId);
             const isOwnBooking = currentUser._id === booking.userId;
             const bookingColor = isOwnBooking ? 'bg-secondary' : 'bg-booked';
+            const isEditable = canEditBooking(currentUser, booking, users);
             
             return (
-                <button onClick={() => onEditBooking(booking)} className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
+                <button 
+                    onClick={() => onEditBooking(booking)} 
+                    disabled={!isEditable}
+                    className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between ${isEditable ? 'group' : 'cursor-not-allowed'} relative overflow-hidden w-full text-left`}
+                    >
                     <div className="flex-grow">
                         <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
                         <p className="text-black/70 text-[11px] truncate">{user?.department}</p>
                         <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
                     </div>
-                     <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 rounded-md text-center">
-                        <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View/Edit</span>
-                    </div>
+                     {isEditable && 
+                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 rounded-md text-center">
+                            <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View/Edit</span>
+                        </div>
+                     }
                 </button>
             )
         }
