@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { User, UserRole } from '../types';
-import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, UserGroupIcon, SettingsIcon, BellIcon } from './Icons';
+import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, UserGroupIcon, SettingsIcon, BellIcon, ClipboardListIcon } from './Icons';
 
 interface BottomNavBarProps {
   currentUser: User;
@@ -20,6 +20,7 @@ const allNavItems: NavItem[] = [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Approvals', viewName: 'Approval Requests', icon: BellIcon, condition: (user) => !!user.isIqacDean },
     { name: 'Bookings', icon: CalendarIcon },
+    { name: 'My Waitlist', viewName: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Rooms', viewName: 'Room Management', icon: RoomIcon, condition: (user) => [UserRole.Principal, UserRole.Dean].includes(user.role) },
     { name: 'Users', viewName: 'User Management', icon: UserGroupIcon, condition: (user) => [UserRole.Principal, UserRole.Dean].includes(user.role) },
     { name: 'History', viewName: 'History Logs', icon: HistoryIcon, condition: (user) => [UserRole.Principal, UserRole.Dean, UserRole.HOD].includes(user.role) },

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { axiosInstance } from './utils/axios';
 
@@ -20,6 +21,7 @@ import Settings from './screens/Settings';
 import Waitlist from './screens/Waitlist';
 import ApprovalRequests from './screens/ApprovalRequests';
 import { BookingModal } from './components/BookingModal';
+import WaitlistModal from './components/WaitlistModal';
 import NotificationCenter from './components/Notification';
 import { Spinner } from './components/Spinner';
 
@@ -55,6 +57,8 @@ const App: React.FC = () => {
     const [bookingToEdit, setBookingToEdit] = useState<(Booking & { date: string; startTime: string; endTime: string; }) | null>(null);
     const [initialSlot, setInitialSlot] = useState<{ date: string; startTime: string; classroomId: string } | undefined>(undefined);
     const [bookingModalMode, setBookingModalMode] = useState<BookingModalMode>('create');
+    const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
+    const [slotToWaitlist, setSlotToWaitlist] = useState<{ date: string; period: number; classroomId: string } | null>(null);
 
     const isApprovalEnabled = useMemo(() => settings.find(s => s.key === 'deanApprovalRequired')?.value === 'true', [settings]);
     
@@ -203,6 +207,32 @@ const App: React.FC = () => {
             const message = error.response?.data?.message || 'Failed to save booking.';
             showToast(message, 'error');
             return false;
+        }
+    };
+
+    const handleJoinWaitlist = async (waitlistData: Omit<WaitlistEntry, '_id' | 'userId' | 'timestamp'>): Promise<boolean> => {
+        try {
+            await axiosInstance.post('/waitlist', waitlistData);
+            await fetchAllData();
+            showToast('Successfully joined the waitlist!', 'success');
+            setIsWaitlistModalOpen(false);
+            setSlotToWaitlist(null);
+            return true;
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to join waitlist.';
+            showToast(message, 'error');
+            return false;
+        }
+    };
+    
+    const handleRemoveFromWaitlist = async (waitlistId: string) => {
+        try {
+            await axiosInstance.delete(`/waitlist/${waitlistId}`);
+            await fetchAllData();
+            showToast('Removed from waitlist.', 'info');
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to leave waitlist.';
+            showToast(message, 'error');
         }
     };
     
@@ -402,6 +432,11 @@ const App: React.FC = () => {
         setBookingModalMode('override');
         setIsBookingModalOpen(true);
     };
+
+    const handleOpenWaitlistModal = (slot: { date: string; period: number; classroomId: string; }) => {
+        setSlotToWaitlist(slot);
+        setIsWaitlistModalOpen(true);
+    };
     
     if (isLoading) {
         return (
@@ -443,6 +478,7 @@ const App: React.FC = () => {
                     onEditBooking={handleEditBooking}
                     onDeleteBooking={handleDeleteBooking}
                     onOverrideBooking={handleOverrideBooking}
+                    onJoinWaitlist={handleOpenWaitlistModal}
                 />;
              case 'Approval Requests':
                 return <ApprovalRequests
@@ -482,6 +518,13 @@ const App: React.FC = () => {
                 />;
             case 'History Logs':
                 return <HistoryLogs logs={historyLogs} />;
+            case 'My Waitlist':
+                return <Waitlist
+                    currentUser={currentUser}
+                    waitlist={waitlist}
+                    classrooms={classrooms}
+                    onRemoveFromWaitlist={handleRemoveFromWaitlist}
+                />;
             case 'Settings':
                 return <Settings 
                     currentUser={currentUser} 
@@ -550,6 +593,18 @@ const App: React.FC = () => {
                     isApprovalEnabled={isApprovalEnabled}
                     users={users}
                     onDelete={handleDeleteBooking}
+                />
+            )}
+            {isWaitlistModalOpen && (
+                <WaitlistModal 
+                    isOpen={isWaitlistModalOpen}
+                    onClose={() => {
+                        setIsWaitlistModalOpen(false);
+                        setSlotToWaitlist(null);
+                    }}
+                    onSave={handleJoinWaitlist}
+                    currentUser={currentUser}
+                    initialSlot={slotToWaitlist}
                 />
             )}
             <NotificationCenter notifications={toastNotifications} />

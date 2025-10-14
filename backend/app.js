@@ -12,6 +12,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import classroomRoutes from './routes/classroomRoutes.js';
 import settingRoutes from './routes/settingRoutes.js';
+import waitlistRoutes from './routes/waitlistRoutes.js';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/classrooms', classroomRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/waitlist', waitlistRoutes);
 
 
 // --- DEPLOYMENT ---

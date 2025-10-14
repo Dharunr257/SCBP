@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -61,9 +62,12 @@ const bookingSchema = new mongoose.Schema({
 const waitlistEntrySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     classroomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Classroom', required: true },
-    date: { type: String, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
+    date: { type: String, required: true }, // YYYY-MM-DD
+    period: { type: Number, required: true },
+    subject: { type: String, required: true },
+    classYear: { type: String, required: true },
+    staffName: { type: String, required: true },
+    contactNo: { type: String, required: true },
 }, { timestamps: { createdAt: 'timestamp' } });
 
 const roomBlockSchema = new mongoose.Schema({

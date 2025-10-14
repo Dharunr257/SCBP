@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, EditIcon, TrashIcon, ClipboardListIcon } from '../components/Icons';
 import DatePicker from '../components/DatePicker';
 
 interface BookingCalendarProps {
@@ -15,6 +16,7 @@ interface BookingCalendarProps {
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (bookingId: string) => void;
   onOverrideBooking: (booking: Booking) => void;
+  onJoinWaitlist: (slot: { date: string; period: number; classroomId: string; }) => void;
 }
 
 type CalendarView = 'Daily' | 'Monthly';
@@ -57,7 +59,7 @@ const canOverrideBooking = (currentUser: User, booking: Booking, users: User[]):
     return rolePower[currentUser.role] > rolePower[bookingOwner.role];
 };
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking, onDeleteBooking, onOverrideBooking }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, waitlist, users, roomBlocks, onBookSlot, onEditBooking, onDeleteBooking, onOverrideBooking, onJoinWaitlist }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarView>('Daily');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -84,15 +86,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         d.setMonth(d.getMonth() + 2);
         return d;
     }, [today]);
-
-    const bookingsBySlot = useMemo(() => {
-        const map = new Map<string, Booking>();
-        bookings.filter(b => b.status === 'confirmed' || b.status === 'overridden').forEach(b => {
-            const key = `${b.date}-${b.startTime}-${b.classroomId}`;
-            map.set(key, b);
-        });
-        return map;
-    }, [bookings]);
     
     const bookingsByDate = useMemo(() => {
         const map = new Map<string, Booking[]>();
@@ -167,35 +160,41 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     const renderSlot = (date: Date, time: string, classroom: Classroom) => {
         const dateStr = formatDate(date);
+        const period = PERIODS.find(p => p.startTime === time);
+        if (!period) return null;
 
         if (classroom.status === 'maintenance') {
             return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600">Maintenance</div>;
         }
 
-        const period = PERIODS.find(p => p.startTime === time);
-        if (period) {
-            const block = roomBlocks.find(b => b.classroomId === classroom._id && b.date === dateStr && b.periods.includes(period.period));
-            if (block) {
-                const blockedByUser = users.find(u => u._id === block.userId);
-                return (
-                    <div className="bg-blocked/80 dark:bg-blocked/50 h-full rounded-md flex flex-col items-center justify-center text-white p-1 text-center">
-                        <p className="text-xs font-bold truncate">{block.reason}</p>
-                        <p className="text-[10px] opacity-80">Blocked by {blockedByUser?.name.split(' ')[0]}</p>
-                    </div>
-                );
-            }
+        const block = roomBlocks.find(b => b.classroomId === classroom._id && b.date === dateStr && b.periods.includes(period.period));
+        if (block) {
+            const blockedByUser = users.find(u => u._id === block.userId);
+            return (
+                <div className="bg-blocked/80 dark:bg-blocked/50 h-full rounded-md flex flex-col items-center justify-center text-white p-1 text-center">
+                    <p className="text-xs font-bold truncate">{block.reason}</p>
+                    <p className="text-[10px] opacity-80">Blocked by {blockedByUser?.name.split(' ')[0]}</p>
+                </div>
+            );
         }
         
-        const slotKey = `${dateStr}-${time}-${classroom._id}`;
-        const booking = bookingsBySlot.get(slotKey);
-        const pendingBookings = bookings.filter(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period?.period && b.status === 'pending');
+        const confirmedBooking = bookings.find(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period.period && (b.status === 'confirmed' || b.status === 'overridden'));
+        const pendingBookings = bookings.filter(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period.period && b.status === 'pending');
+        const waitlistForSlot = waitlist.filter(w => w.classroomId === classroom._id && w.date === dateStr && w.period === period.period);
 
-        if (booking) {
+        const userIsOnWaitlist = waitlistForSlot.some(w => w.userId === currentUser._id);
+        const userHasPendingRequest = pendingBookings.some(b => b.userId === currentUser._id);
+
+        const bookingToConsider = confirmedBooking || pendingBookings[0];
+
+        // Renders the main booking/pending info card
+        const BookingInfoCard = ({ booking }: { booking: Booking }) => {
             const user = users.find(u => u._id === booking.userId);
             const isOwner = currentUser._id === booking.userId;
             const canOverride = canOverrideBooking(currentUser, booking, users);
+            const isPending = booking.status === 'pending';
             
-            let bookingColor = 'bg-booked';
+            let bookingColor = isPending ? 'bg-yellow-500' : 'bg-booked';
             if (isOwner) bookingColor = 'bg-secondary';
             if (booking.status === 'overridden') bookingColor = 'bg-purple-500';
 
@@ -205,11 +204,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                         <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
                         <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
                         <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
-                         {booking.status === 'overridden' && (
-                            <p className="text-white/80 text-[10px] font-semibold mt-1">Overridden</p>
-                         )}
+                        {isPending ? <p className="text-white/80 text-[10px] font-semibold mt-1">Pending Request</p> : null}
+                        {booking.status === 'overridden' && <p className="text-white/80 text-[10px] font-semibold mt-1">Overridden</p>}
+                        {waitlistForSlot.length > 0 && <div className="text-white/80 text-[10px] font-semibold mt-1 flex items-center gap-1"><ClipboardListIcon className="w-3 h-3"/> {waitlistForSlot.length} on waitlist</div>}
                     </div>
-                     {(isOwner || canOverride) && 
+                    {(isOwner || canOverride) && !isPending && (
                         <div className="absolute inset-0 bg-black bg-opacity-60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1 rounded-md text-center space-y-1">
                             {isOwner && (
                                 <>
@@ -217,28 +216,47 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                 <button onClick={() => onDeleteBooking(booking._id)} className="w-full text-center py-1.5 px-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold flex items-center justify-center"><TrashIcon className="w-3 h-3 mr-1.5"/> Delete</button>
                                 </>
                             )}
-                            {canOverride && (
-                                <button onClick={() => onOverrideBooking(booking)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold flex items-center justify-center">Override</button>
-                            )}
+                            {canOverride && <button onClick={() => onOverrideBooking(booking)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
                         </div>
-                     }
+                    )}
                 </div>
             )
-        }
+        };
 
-        if (pendingBookings.length > 0) {
+        // If there's any booking or pending request
+        if (bookingToConsider) {
+            const isOwnerOrRequester = currentUser._id === bookingToConsider.userId;
+
+            if (isOwnerOrRequester || userHasPendingRequest) {
+                return <BookingInfoCard booking={bookingToConsider} />;
+            }
+            if (userIsOnWaitlist) {
+                 return (
+                    <div className="bg-gray-100 dark:bg-gray-800 h-full rounded-md flex flex-col text-center justify-center items-center p-1 border border-dashed border-orange-400">
+                        <BookingInfoCard booking={bookingToConsider} />
+                        <div className="w-full bg-orange-500 text-white text-[10px] font-bold py-0.5 rounded-b-md absolute bottom-0 left-0">YOU ARE ON THE WAITLIST</div>
+                    </div>
+                 );
+            }
+            // Other user looking at a booked/pending slot
+            const canOverride = canOverrideBooking(currentUser, bookingToConsider, users);
             return (
-                <div className="bg-yellow-200 dark:bg-yellow-800/50 h-full rounded-md flex flex-col items-center justify-center text-yellow-800 dark:text-yellow-200 p-1 text-center">
-                    <p className="text-xs font-bold">Pending</p>
-                    <p className="text-[10px] font-semibold">{pendingBookings.length} Request(s)</p>
+                <div className="h-full rounded-md flex flex-col text-center justify-between p-1 relative">
+                    <div className="absolute inset-1">
+                        <BookingInfoCard booking={bookingToConsider} />
+                    </div>
+                    <div className="relative z-10 w-full flex-grow flex flex-col justify-end items-center gap-1.5 p-1 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-md opacity-0 hover:opacity-100 transition-opacity">
+                        {canOverride && <button onClick={() => onOverrideBooking(bookingToConsider)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
+                        <button onClick={() => onJoinWaitlist({ date: dateStr, period: period.period, classroomId: classroom._id })} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold">Join Waitlist</button>
+                    </div>
                 </div>
-            )
-        }
-        
-        if (currentUser.role === UserRole.Faculty) {
-             return <div className="bg-available/10 w-full h-full rounded-md"></div>;
+            );
         }
 
+        // Slot is available
+        if (currentUser.role === UserRole.Faculty) {
+            return <div className="bg-available/10 w-full h-full rounded-md"></div>;
+        }
         return (
             <button 
                 onClick={() => onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id })}

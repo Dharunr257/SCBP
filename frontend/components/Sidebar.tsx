@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { User, UserRole } from '../types';
-import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, SettingsIcon, BellIcon, UserGroupIcon } from './Icons';
+import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, SettingsIcon, BellIcon, UserGroupIcon, ClipboardListIcon } from './Icons';
 
 interface SidebarProps {
   currentUser: User;
@@ -14,6 +14,7 @@ const navItems = {
   [UserRole.Principal]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
+    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -24,6 +25,7 @@ const navItems = {
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Approval Requests', icon: BellIcon, condition: (user: User) => !!user.isIqacDean },
     { name: 'Bookings', icon: CalendarIcon },
+    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -33,6 +35,7 @@ const navItems = {
   [UserRole.HOD]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
+    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Reports', icon: ReportsIcon },
     { name: 'History Logs', icon: HistoryIcon },
     { name: 'Settings', icon: SettingsIcon },
@@ -40,6 +43,7 @@ const navItems = {
   [UserRole.Faculty]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
+    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Settings', icon: SettingsIcon },
   ],
 };
@@ -54,11 +58,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeView, setActiveVie
         <ul>
           {items.map((item) => {
             const Icon = item.icon;
-            const isActive = activeView === item.name;
+            const viewName = (item as any).viewName || item.name;
+            const isActive = activeView === viewName;
             return (
               <li key={item.name} title={isCollapsed ? item.name : undefined}>
                 <button
-                  onClick={() => setActiveView(item.name)}
+                  onClick={() => setActiveView(viewName)}
                   className={`w-full text-left flex items-center space-x-3 p-3 rounded-lg font-medium transition-colors ${
                     isActive
                       ? 'bg-primary/10 text-primary dark:bg-primary-dark/20 dark:text-primary-dark'

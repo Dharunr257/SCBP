@@ -1,3 +1,4 @@
+
 export enum UserRole {
   Principal = "Principal",
   Dean = "Dean",
@@ -50,8 +51,11 @@ export interface WaitlistEntry {
   userId: string;
   classroomId: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  period: number;
+  subject: string;
+  classYear: string;
+  staffName: string;
+  contactNo: string;
   timestamp: Date;
 }
 
