@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CloseIcon } from '../components/Icons';
@@ -220,9 +219,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.department}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {user.role}
-                            </span>
+                            <div className='flex items-center space-x-2'>
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    {user.role}
+                                </span>
+                                {user.isIqacDean && (
+                                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                        IQAC
+                                    </span>
+                                )}
+                            </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
                                 <button onClick={() => handleEditClick(user)} disabled={!canEdit} className="text-primary dark:text-primary-dark hover:underline inline-flex items-center disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed disabled:no-underline"><EditIcon className="w-4 h-4 mr-1"/>Edit</button>

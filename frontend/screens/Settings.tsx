@@ -1,13 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, Setting, UserRole } from '../types';
 
 interface SettingsProps {
     currentUser: User;
     onChangePassword: (current: string, newPass: string) => Promise<{ success: boolean, message: string }>;
     onUpdateProfile: (userData: { name: string, email: string }) => Promise<{ success: boolean, message: string }>;
+    settings: Setting[];
+    onUpdateSetting: (key: string, value: string) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUpdateProfile }) => {
+const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUpdateProfile, settings, onUpdateSetting }) => {
     // Password State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -20,6 +23,9 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
     const [email, setEmail] = useState('');
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
+
+    const approvalSetting = settings.find(s => s.key === 'deanApprovalRequired');
+    const isApprovalEnabled = approvalSetting?.value === 'true';
     
     useEffect(() => {
         if(currentUser) {
@@ -64,6 +70,13 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
         }
     };
 
+    const handleApprovalToggle = () => {
+        const action = isApprovalEnabled ? 'DISABLE' : 'ENABLE';
+        const confirmationMessage = `Are you sure you want to ${action} the Dean Approval System?`;
+        if (window.confirm(confirmationMessage)) {
+            onUpdateSetting('deanApprovalRequired', (!isApprovalEnabled).toString());
+        }
+    };
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 dark:bg-dark-bg min-h-full">
@@ -71,6 +84,21 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
       
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+
+          {currentUser.role === UserRole.Principal && (
+              <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6">
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">System Controls</h3>
+                <div className="flex items-center justify-between p-4 border dark:border-gray-700 rounded-lg">
+                    <div>
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">Dean Approval System</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">If enabled, all bookings from Deans/HODs will require approval from the IQAC Dean.</p>
+                    </div>
+                    <button onClick={handleApprovalToggle} className={`font-bold py-2 px-4 rounded-lg text-sm ${isApprovalEnabled ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}>
+                        {isApprovalEnabled ? 'Disable' : 'Enable'}
+                    </button>
+                </div>
+              </div>
+          )}
 
           <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6">
             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Profile Settings</h3>

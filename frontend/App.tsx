@@ -1,10 +1,9 @@
 
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { axiosInstance } from './utils/axios';
 
 // Import types
-import { User, UserRole, Booking, Classroom, WaitlistEntry, RoomBlock, HistoryLog, LogAction, Notification as AppNotification } from './types';
+import { User, UserRole, Booking, Classroom, WaitlistEntry, RoomBlock, HistoryLog, Setting, Notification as AppNotification } from './types';
 import { PERIODS } from './constants';
 
 // Import components and screens
@@ -17,10 +16,10 @@ import BookingCalendar from './screens/BookingCalendar';
 import RoomManagement from './screens/RoomManagement';
 import UserManagement from './screens/UserManagement';
 import Reports from './screens/Reports';
-// FIX: Changed import for HistoryLogs from default to named.
 import { HistoryLogs } from './screens/HistoryLogs';
 import Settings from './screens/Settings';
 import Waitlist from './screens/Waitlist';
+import ApprovalRequests from './screens/ApprovalRequests';
 import { BookingModal } from './components/BookingModal';
 import NotificationCenter from './components/Notification';
 
@@ -45,19 +44,22 @@ const App: React.FC = () => {
     const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [toastNotifications, setToastNotifications] = useState<ToastNotification[]>([]);
+    const [settings, setSettings] = useState<Setting[]>([]);
 
     // Modal states
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [bookingToEdit, setBookingToEdit] = useState<(Booking & { date: string; startTime: string; endTime: string; }) | null>(null);
     const [initialSlot, setInitialSlot] = useState<{ date: string; startTime: string; classroomId: string } | undefined>(undefined);
     const [isOverriding, setIsOverriding] = useState(false);
+
+    const isApprovalEnabled = useMemo(() => settings.find(s => s.key === 'deanApprovalRequired')?.value === 'true', [settings]);
     
     const showToast = useCallback((message: string, type: 'success' | 'info' | 'error') => {
         const newToast: ToastNotification = { id: Date.now(), message, type };
         setToastNotifications(prev => [...prev, newToast]);
         setTimeout(() => {
             setToastNotifications(prev => prev.filter(t => t.id !== newToast.id));
-        }, 3000);
+        }, 5000);
     }, []);
     
     const handleLogout = useCallback(() => {
@@ -77,6 +79,7 @@ const App: React.FC = () => {
             setRoomBlocks(data.roomBlocks);
             setHistoryLogs(data.historyLogs);
             setNotifications(data.notifications);
+            setSettings(data.settings);
         } catch (error: any) {
             console.error("Failed to fetch data:", error);
             const message = error.response?.data?.message || 'Failed to load application data.';
@@ -86,7 +89,6 @@ const App: React.FC = () => {
 
     // Auth logic
     useEffect(() => {
-        // Global error handler for unauthorized responses
         const responseInterceptor = axiosInstance.interceptors.response.use(
             response => response,
             error => {
@@ -105,7 +107,6 @@ const App: React.FC = () => {
                     setCurrentUser(user);
                     await fetchAllData();
                 } catch (error) {
-                    // The interceptor will handle the logout if it's a 401
                     console.error("Login check failed", error);
                 }
             }
@@ -114,7 +115,6 @@ const App: React.FC = () => {
         
         checkLoggedIn();
 
-        // Cleanup interceptor on component unmount
         return () => {
             axiosInstance.interceptors.response.eject(responseInterceptor);
         };
@@ -145,9 +145,7 @@ const App: React.FC = () => {
                 const periodInfo = PERIODS.find(p => p.period === bookingData.periods[0]);
                 if (!periodInfo) return false;
                 const payload = { ...bookingData, period: bookingData.periods[0], startTime: periodInfo.startTime, endTime: periodInfo.endTime };
-                const { data: updatedBooking } = await axiosInstance.post(`/bookings`, payload);
-                setBookings(prev => prev.map(b => b._id === updatedBooking._id ? updatedBooking : b));
-                setHistoryLogs(prev => [updatedBooking.log, ...prev]);
+                await axiosInstance.post(`/bookings`, payload);
                 showToast('Booking updated successfully!', 'success');
             } else { // Creating
                 const newBookingPayloads = bookingData.periods.map(period => {
@@ -155,18 +153,17 @@ const App: React.FC = () => {
                     return {
                         ...bookingData,
                         userId: currentUser._id,
-                        status: currentUser.role === UserRole.Faculty ? 'pending' : 'confirmed',
                         period,
                         startTime: periodInfo?.startTime || "00:00",
                         endTime: periodInfo?.endTime || "00:00",
                     }
                 });
                 const { data: newBookings } = await axiosInstance.post('/bookings', { bookings: newBookingPayloads });
-                setBookings(prev => [...prev, ...newBookings]);
-                await fetchAllData();
-                showToast(`Successfully created ${newBookings.length} booking(s)!`, 'success');
+                const isPending = newBookings[0]?.status === 'pending';
+                showToast(isPending ? 'Booking request sent for approval!' : `Successfully created ${newBookings.length} booking(s)!`, isPending ? 'info' : 'success');
             }
             
+            await fetchAllData();
             setIsBookingModalOpen(false);
             setBookingToEdit(null);
             setInitialSlot(undefined);
@@ -206,7 +203,6 @@ const App: React.FC = () => {
         if (window.confirm('Are you sure you want to delete this booking?')) {
             try {
                 await axiosInstance.delete(`/bookings/${bookingId}`);
-                setBookings(prev => prev.filter(b => b._id !== bookingId));
                 await fetchAllData();
                 showToast('Booking deleted!', 'success');
             } catch (error: any) {
@@ -217,33 +213,34 @@ const App: React.FC = () => {
     };
 
     const handleApproveBooking = async (bookingId: string) => {
-        try {
-            const { data: updatedBooking } = await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'confirmed' });
-            setBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
-            await fetchAllData();
-            showToast('Booking approved!', 'success');
-        } catch(e: any) { 
-            const message = e.response?.data?.message || 'Failed to approve booking';
-            showToast(message, 'error');
+        if (window.confirm('Are you sure you want to APPROVE this booking? This may reject other pending requests for the same slot.')) {
+            try {
+                await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'confirmed' });
+                await fetchAllData();
+                showToast('Booking approved!', 'success');
+            } catch(e: any) { 
+                const message = e.response?.data?.message || 'Failed to approve booking';
+                showToast(message, 'error');
+            }
         }
     };
 
     const handleDeclineBooking = async (bookingId: string) => {
-        try {
-            const { data: updatedBooking } = await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'declined' });
-            setBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
-            await fetchAllData();
-            showToast('Booking declined!', 'info');
-        } catch(e: any) { 
-            const message = e.response?.data?.message || 'Failed to decline booking';
-            showToast(message, 'error');
+         if (window.confirm('Are you sure you want to DECLINE this booking request?')) {
+            try {
+                await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'declined' });
+                await fetchAllData();
+                showToast('Booking declined!', 'info');
+            } catch(e: any) { 
+                const message = e.response?.data?.message || 'Failed to decline booking';
+                showToast(message, 'error');
+            }
         }
     };
     
     const handleAddClassroom = async (name: string) => {
         try {
-            const { data: newClassroom } = await axiosInstance.post('/classrooms', { name });
-            setClassrooms(prev => [...prev, newClassroom].sort((a,b) => a.name.localeCompare(b.name)));
+            await axiosInstance.post('/classrooms', { name });
             await fetchAllData();
             showToast(`Classroom "${name}" added successfully.`, 'success');
         } catch(e: any) { 
@@ -255,7 +252,6 @@ const App: React.FC = () => {
     const handleDeleteClassroom = async (classroomId: string) => {
         try {
             await axiosInstance.delete(`/classrooms/${classroomId}`);
-            setClassrooms(prev => prev.filter(c => c._id !== classroomId));
             await fetchAllData();
             showToast('Classroom removed successfully.', 'success');
         } catch(e: any) { 
@@ -266,8 +262,7 @@ const App: React.FC = () => {
 
     const handleUpdateClassroom = async (classroom: Classroom) => {
         try {
-            const { data: updated } = await axiosInstance.put(`/classrooms/${classroom._id}`, { status: classroom.status });
-            setClassrooms(prev => prev.map(c => c._id === updated._id ? updated : c));
+            await axiosInstance.put(`/classrooms/${classroom._id}`, { status: classroom.status });
             await fetchAllData();
             showToast(`Classroom ${classroom.name} status updated.`, 'success');
         } catch(e: any) { 
@@ -278,8 +273,7 @@ const App: React.FC = () => {
 
     const handleAddBlock = async (blockData: Omit<RoomBlock, '_id' | 'userId'>) => {
         try {
-            const { data: newBlock } = await axiosInstance.post('/classrooms/blocks', blockData);
-            setRoomBlocks(prev => [...prev, newBlock]);
+            await axiosInstance.post('/classrooms/blocks', blockData);
             await fetchAllData();
             showToast('Room blocked successfully.', 'success');
         } catch(e: any) { 
@@ -291,7 +285,6 @@ const App: React.FC = () => {
     const handleDeleteBlock = async (blockId: string) => {
         try {
             await axiosInstance.delete(`/classrooms/blocks/${blockId}`);
-            setRoomBlocks(prev => prev.filter(b => b._id !== blockId));
             await fetchAllData();
             showToast('Room block removed.', 'success');
         } catch(e: any) { 
@@ -302,8 +295,7 @@ const App: React.FC = () => {
 
     const handleAddUser = async (userData: Omit<User, '_id' | 'password'>) => {
         try {
-            const { data: newUser } = await axiosInstance.post('/users', { ...userData, password: 'password123' });
-            setUsers(prev => [...prev, newUser]);
+            await axiosInstance.post('/users', { ...userData, password: 'password123' });
             await fetchAllData();
             showToast('User added successfully!', 'success');
         } catch(e: any) { 
@@ -314,8 +306,7 @@ const App: React.FC = () => {
 
     const handleUpdateUser = async (user: User) => {
         try {
-            const { data: updatedUser } = await axiosInstance.put(`/users/${user._id}`, user);
-            setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
+            await axiosInstance.put(`/users/${user._id}`, user);
             await fetchAllData();
             showToast('User updated successfully!', 'success');
         } catch(e: any) { 
@@ -327,13 +318,23 @@ const App: React.FC = () => {
     const handleDeleteUser = async (userId: string) => {
        try {
            await axiosInstance.delete(`/users/${userId}`);
-           setUsers(prev => prev.filter(u => u._id !== userId));
            await fetchAllData();
            showToast('User deleted successfully!', 'success');
        } catch(e: any) { 
            const message = e.response?.data?.message || 'Failed to delete user.';
            showToast(message, 'error');
        }
+    };
+    
+    const handleUpdateSetting = async (key: string, value: string) => {
+        try {
+            await axiosInstance.put(`/settings/${key}`, { value });
+            await fetchAllData();
+            showToast('Settings updated successfully!', 'success');
+        } catch(e: any) {
+            const message = e.response?.data?.message || 'Failed to update setting.';
+            showToast(message, 'error');
+        }
     };
 
 
@@ -358,7 +359,6 @@ const App: React.FC = () => {
         setIsBookingModalOpen(true);
     };
     
-    // Render logic
     if (isLoading) {
         return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-white">Loading...</div>;
     }
@@ -381,6 +381,7 @@ const App: React.FC = () => {
                             onQuickBook={handleOpenBookingModal}
                             onApproveBooking={handleApproveBooking}
                             onDeclineBooking={handleDeclineBooking}
+                            isApprovalEnabled={isApprovalEnabled}
                         />;
             case 'Bookings':
                 return <BookingCalendar 
@@ -391,11 +392,17 @@ const App: React.FC = () => {
                     users={users}
                     roomBlocks={roomBlocks}
                     onBookSlot={handleOpenBookingModal}
-                    onJoinWaitlist={() => {}}
                     onEditBooking={handleEditBooking}
                     onDeleteBooking={handleDeleteBooking}
-                    onOverrideBooking={() => {}}
-                    onViewDetails={() => {}}
+                />;
+             case 'Approval Requests':
+                return <ApprovalRequests
+                    currentUser={currentUser}
+                    bookings={bookings}
+                    classrooms={classrooms}
+                    users={users}
+                    onApproveBooking={handleApproveBooking}
+                    onDeclineBooking={handleDeclineBooking}
                 />;
             case 'Room Management':
                 return <RoomManagement 
@@ -426,18 +433,13 @@ const App: React.FC = () => {
                 />;
             case 'History Logs':
                 return <HistoryLogs logs={historyLogs} />;
-            case 'My Waitlist':
-                 return <Waitlist 
-                    currentUser={currentUser}
-                    waitlist={waitlist}
-                    classrooms={classrooms}
-                    onRemoveFromWaitlist={(id) => {}}
-                 />;
             case 'Settings':
                 return <Settings 
                     currentUser={currentUser} 
                     onChangePassword={handleChangePassword}
                     onUpdateProfile={handleUpdateProfile}
+                    settings={settings}
+                    onUpdateSetting={handleUpdateSetting}
                 />;
             default:
                 return <Dashboard 
@@ -449,6 +451,7 @@ const App: React.FC = () => {
                             onQuickBook={handleOpenBookingModal}
                             onApproveBooking={handleApproveBooking}
                             onDeclineBooking={handleDeclineBooking}
+                            isApprovalEnabled={isApprovalEnabled}
                         />;
         }
     };
@@ -456,7 +459,7 @@ const App: React.FC = () => {
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100">
             <Sidebar 
-                userRole={currentUser.role}
+                currentUser={currentUser}
                 activeView={activeView}
                 setActiveView={setActiveView}
                 isCollapsed={isSidebarCollapsed}
@@ -474,7 +477,7 @@ const App: React.FC = () => {
                     {renderActiveView()}
                 </main>
                 <BottomNavBar 
-                    userRole={currentUser.role}
+                    currentUser={currentUser}
                     activeView={activeView}
                     setActiveView={setActiveView}
                 />
@@ -493,6 +496,7 @@ const App: React.FC = () => {
                     bookingToEdit={bookingToEdit}
                     initialSlot={initialSlot}
                     isOverriding={isOverriding}
+                    isApprovalEnabled={isApprovalEnabled}
                 />
             )}
             <NotificationCenter notifications={toastNotifications} />

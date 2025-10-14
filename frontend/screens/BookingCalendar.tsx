@@ -1,9 +1,8 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon, TrashIcon, InfoIcon } from '../components/Icons';
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon } from '../components/Icons';
 import DatePicker from '../components/DatePicker';
 
 interface BookingCalendarProps {
@@ -14,11 +13,8 @@ interface BookingCalendarProps {
   users: User[];
   roomBlocks: RoomBlock[];
   onBookSlot: (slot: { date: string; startTime: string; classroomId: string }) => void;
-  onJoinWaitlist: (slot: { date: string; startTime: string; endTime: string; classroomId: string }) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (bookingId: string) => void;
-  onOverrideBooking: (booking: Booking) => void;
-  onViewDetails: (booking: Booking) => void;
 }
 
 type CalendarView = 'Daily' | 'Monthly';
@@ -45,13 +41,11 @@ const getMonthCalendarDays = (date: Date): Date[] => {
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, waitlist, users, roomBlocks, onBookSlot, onJoinWaitlist, onEditBooking, onDeleteBooking, onOverrideBooking, onViewDetails }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarView>('Daily');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
-
-    const activeBookings = useMemo(() => bookings.filter(b => b.status !== 'declined'), [bookings]);
 
     useEffect(() => {
         const availableClassrooms = classrooms.filter(c => c.status === 'available');
@@ -77,16 +71,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     const bookingsBySlot = useMemo(() => {
         const map = new Map<string, Booking>();
-        activeBookings.forEach(b => {
+        bookings.filter(b => b.status === 'confirmed').forEach(b => {
             const key = `${b.date}-${b.startTime}-${b.classroomId}`;
             map.set(key, b);
         });
         return map;
-    }, [activeBookings]);
+    }, [bookings]);
     
     const bookingsByDate = useMemo(() => {
         const map = new Map<string, Booking[]>();
-        activeBookings.forEach(b => {
+        bookings.forEach(b => {
             const dateKey = b.date;
             if (!map.has(dateKey)) {
                 map.set(dateKey, []);
@@ -97,19 +91,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             dayBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
         });
         return map;
-    }, [activeBookings]);
+    }, [bookings]);
 
-    const userWaitlistBySlot = useMemo(() => {
-        const set = new Set<string>();
-        waitlist
-            .filter(w => w.userId === currentUser._id)
-            .forEach(w => {
-                const key = `${w.date}-${w.startTime}-${w.classroomId}`;
-                set.add(key);
-            });
-        return set;
-    }, [waitlist, currentUser._id]);
-    
     const handleDateChange = (increment: number) => {
         const newDate = new Date(currentDate);
         if (view === 'Monthly') {
@@ -170,11 +153,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         const dateStr = formatDate(date);
 
         if (classroom.status === 'maintenance') {
-            return (
-                <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600">
-                    Maintenance
-                </div>
-            );
+            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600">Maintenance</div>;
         }
 
         const period = PERIODS.find(p => p.startTime === time);
@@ -193,25 +172,33 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         
         const slotKey = `${dateStr}-${time}-${classroom._id}`;
         const booking = bookingsBySlot.get(slotKey);
+        const pendingBookings = bookings.filter(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period?.period && b.status === 'pending');
 
         if (booking) {
             const user = users.find(u => u._id === booking.userId);
             const isOwnBooking = currentUser._id === booking.userId;
-            const isPending = booking.status === 'pending';
-            const bookingColor = isPending ? 'bg-waitlist' : isOwnBooking ? 'bg-secondary' : 'bg-booked';
+            const bookingColor = isOwnBooking ? 'bg-secondary' : 'bg-booked';
             
             return (
-                <button onClick={() => onViewDetails(booking)} className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
+                <button onClick={() => onEditBooking(booking)} className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
                     <div className="flex-grow">
                         <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
                         <p className="text-black/70 text-[11px] truncate">{user?.department}</p>
                         <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
                     </div>
-                     {isPending && <p className="text-[10px] font-bold text-black/80 self-start">PENDING</p>}
                      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 rounded-md text-center">
-                        <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View</span>
+                        <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View/Edit</span>
                     </div>
                 </button>
+            )
+        }
+
+        if (pendingBookings.length > 0) {
+            return (
+                <div className="bg-yellow-200 dark:bg-yellow-800/50 h-full rounded-md flex flex-col items-center justify-center text-yellow-800 dark:text-yellow-200 p-1 text-center">
+                    <p className="text-xs font-bold">Pending</p>
+                    <p className="text-[10px] font-semibold">{pendingBookings.length} Request(s)</p>
+                </div>
             )
         }
         
@@ -317,7 +304,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                     {dayBookings.slice(0, 3).map(booking => {
                                         const isOwnBooking = booking.userId === currentUser._id;
                                         const isPending = booking.status === 'pending';
-                                        const bgColor = isPending ? 'bg-waitlist/80' : isOwnBooking ? 'bg-secondary/80' : 'bg-booked/80';
+                                        const bgColor = isPending ? 'bg-yellow-200/80' : isOwnBooking ? 'bg-secondary/80' : 'bg-booked/80';
                                         return (
                                             <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>
                                                 <div className="flex items-center">

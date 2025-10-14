@@ -1,3 +1,4 @@
+
 export enum UserRole {
   Principal = "Principal",
   Dean = "Dean",
@@ -12,6 +13,7 @@ export interface User {
   department: string;
   email: string;
   password?: string; // Password should not always be sent to frontend
+  isIqacDean?: boolean;
 }
 
 export enum BookingStatus {
@@ -99,4 +101,9 @@ export interface Notification {
   type: 'success' | 'info' | 'error';
   timestamp: Date;
   read: boolean;
+}
+
+export interface Setting {
+    key: string;
+    value: string;
 }

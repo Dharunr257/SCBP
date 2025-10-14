@@ -11,6 +11,7 @@ import dataRoutes from './routes/dataRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import classroomRoutes from './routes/classroomRoutes.js';
+import settingRoutes from './routes/settingRoutes.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/data', dataRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/classrooms', classroomRoutes);
+app.use('/api/settings', settingRoutes);
 
 
 // --- DEPLOYMENT ---

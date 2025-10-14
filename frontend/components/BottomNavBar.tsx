@@ -1,51 +1,35 @@
+
 import React from 'react';
-import { UserRole } from '../types';
-import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, UserGroupIcon, SettingsIcon } from './Icons';
+import { User, UserRole } from '../types';
+import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, UserGroupIcon, SettingsIcon, BellIcon } from './Icons';
 
 interface BottomNavBarProps {
-  userRole: UserRole;
+  currentUser: User;
   activeView: string;
   setActiveView: (view: string) => void;
 }
 
-// Fix: Defined an interface for the navigation items to correctly type the optional 'viewName' property.
 interface NavItem {
   name: string;
   icon: React.FC<{ className?: string }>;
   viewName?: string;
+  condition?: (user: User) => boolean;
 }
 
-const navItems: Record<UserRole, NavItem[]> = {
-  [UserRole.Principal]: [
+const allNavItems: NavItem[] = [
     { name: 'Dashboard', icon: DashboardIcon },
+    { name: 'Approvals', viewName: 'Approval Requests', icon: BellIcon, condition: (user) => !!user.isIqacDean },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'Rooms', viewName: 'Room Management', icon: RoomIcon },
-    { name: 'Users', viewName: 'User Management', icon: UserGroupIcon },
+    { name: 'Rooms', viewName: 'Room Management', icon: RoomIcon, condition: (user) => [UserRole.Principal, UserRole.Dean].includes(user.role) },
+    { name: 'Users', viewName: 'User Management', icon: UserGroupIcon, condition: (user) => [UserRole.Principal, UserRole.Dean].includes(user.role) },
+    { name: 'History', viewName: 'History Logs', icon: HistoryIcon, condition: (user) => [UserRole.Principal, UserRole.Dean, UserRole.HOD].includes(user.role) },
+    { name: 'Reports', icon: ReportsIcon, condition: (user) => [UserRole.Principal, UserRole.Dean, UserRole.HOD].includes(user.role) },
     { name: 'Settings', icon: SettingsIcon },
-  ],
-  [UserRole.Dean]: [
-    { name: 'Dashboard', icon: DashboardIcon },
-    { name: 'Bookings', icon: CalendarIcon },
-    { name: 'Users', viewName: 'User Management', icon: UserGroupIcon },
-    { name: 'Reports', icon: ReportsIcon },
-    { name: 'Settings', icon: SettingsIcon },
-  ],
-  [UserRole.HOD]: [
-    { name: 'Dashboard', icon: DashboardIcon },
-    { name: 'Bookings', icon: CalendarIcon },
-    { name: 'History', viewName: 'History Logs', icon: HistoryIcon },
-    { name: 'Reports', icon: ReportsIcon },
-    { name: 'Settings', icon: SettingsIcon },
-  ],
-  [UserRole.Faculty]: [
-    { name: 'Dashboard', icon: DashboardIcon },
-    { name: 'Bookings', icon: CalendarIcon },
-    { name: 'Settings', icon: SettingsIcon },
-  ],
-};
+];
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ userRole, activeView, setActiveView }) => {
-  const items = navItems[userRole] || [];
+
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentUser, activeView, setActiveView }) => {
+  const items = allNavItems.filter(item => !item.condition || item.condition(currentUser));
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-card border-t border-gray-200 dark:border-dark-border shadow-lg z-30">

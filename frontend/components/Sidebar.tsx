@@ -1,9 +1,10 @@
+
 import React from 'react';
-import { UserRole } from '../types';
-import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, SettingsIcon, WaitlistIcon, UserGroupIcon } from './Icons';
+import { User, UserRole } from '../types';
+import { DashboardIcon, CalendarIcon, RoomIcon, ReportsIcon, HistoryIcon, SettingsIcon, BellIcon, UserGroupIcon } from './Icons';
 
 interface SidebarProps {
-  userRole: UserRole;
+  currentUser: User;
   activeView: string;
   setActiveView: (view: string) => void;
   isCollapsed: boolean;
@@ -13,7 +14,6 @@ const navItems = {
   [UserRole.Principal]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: WaitlistIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -22,8 +22,8 @@ const navItems = {
   ],
   [UserRole.Dean]: [
     { name: 'Dashboard', icon: DashboardIcon },
+    { name: 'Approval Requests', icon: BellIcon, condition: (user: User) => !!user.isIqacDean },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: WaitlistIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -33,7 +33,6 @@ const navItems = {
   [UserRole.HOD]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: WaitlistIcon },
     { name: 'Reports', icon: ReportsIcon },
     { name: 'History Logs', icon: HistoryIcon },
     { name: 'Settings', icon: SettingsIcon },
@@ -45,8 +44,9 @@ const navItems = {
   ],
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole, activeView, setActiveView, isCollapsed }) => {
-  const items = navItems[userRole] || [];
+const Sidebar: React.FC<SidebarProps> = ({ currentUser, activeView, setActiveView, isCollapsed }) => {
+  const userRoleNavs = navItems[currentUser.role] || [];
+  const items = userRoleNavs.filter(item => !('condition' in item) || (item as any).condition(currentUser));
 
   return (
     <aside className={`bg-gray-50 dark:bg-dark-card p-4 space-y-2 h-full hidden md:flex flex-col dark:border-r dark:border-dark-border transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>

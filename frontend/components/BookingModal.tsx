@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Booking, Classroom, User } from '../types';
+import { Booking, Classroom, User, UserRole } from '../types';
 import { CloseIcon } from './Icons';
 import { PERIODS, formatTime12h } from '../constants';
 
@@ -13,9 +13,10 @@ interface BookingModalProps {
   bookingToEdit?: (Booking & { date: string; startTime: string; endTime: string }) | null;
   initialSlot?: { date: string; startTime: string; classroomId: string };
   isOverriding?: boolean;
+  isApprovalEnabled: boolean;
 }
 
-export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, classrooms, currentUser, bookingToEdit, initialSlot, isOverriding }) => {
+export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, classrooms, currentUser, bookingToEdit, initialSlot, isOverriding, isApprovalEnabled }) => {
   const [subject, setSubject] = useState('');
   const [classYear, setClassYear] = useState('');
   const [classroomId, setClassroomId] = useState<string>(classrooms.length === 1 ? classrooms[0]._id : '');
@@ -76,6 +77,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser.role === UserRole.Faculty) {
+        setError('Faculty members cannot create bookings.');
+        return;
+    }
     if (!subject || !classYear || !classroomId || !date || selectedPeriods.length === 0 || !staffName || !contactNo) {
       setError('All fields are required, and at least one period must be selected.');
       return;
@@ -105,6 +110,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
     }
     setLoading(false);
   };
+  
+  const requiresApproval = isApprovalEnabled && !bookingToEdit && currentUser.role !== UserRole.Principal && !currentUser.isIqacDean;
 
   if (!isOpen) return null;
 
@@ -116,10 +123,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
         </button>
         <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">{bookingToEdit ? 'Edit Booking' : 'Create Booking'}</h2>
         
-        {isOverriding && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-                <p className="font-bold">Override Warning</p>
-                <p>You are about to book a slot that is already taken. This will override the existing booking.</p>
+        {requiresApproval && (
+            <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4" role="alert">
+                <p>This booking will be sent to the IQAC Dean for approval.</p>
             </div>
         )}
 
@@ -173,7 +179,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex justify-end pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-            <button type="submit" disabled={loading} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 disabled:bg-gray-500">{loading ? 'Saving...' : (bookingToEdit ? 'Update' : isOverriding ? 'Override' : 'Book')}</button>
+            <button type="submit" disabled={loading || currentUser.role === UserRole.Faculty} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 disabled:bg-gray-500">{loading ? 'Saving...' : (bookingToEdit ? 'Update' : requiresApproval ? 'Request Booking' : 'Book')}</button>
           </div>
         </form>
       </div>

@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     department: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    isIqacDean: { type: Boolean, default: false },
 });
 
 // Hash password before saving
@@ -87,6 +88,11 @@ const notificationSchema = new mongoose.Schema({
     read: { type: Boolean, default: false },
 }, { timestamps: { createdAt: 'timestamp' } });
 
+const settingSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true },
+    value: { type: String, required: true }
+});
+
 export const User = mongoose.model('User', userSchema);
 export const Classroom = mongoose.model('Classroom', classroomSchema);
 export const Booking = mongoose.model('Booking', bookingSchema);
@@ -94,3 +100,4 @@ export const WaitlistEntry = mongoose.model('WaitlistEntry', waitlistEntrySchema
 export const RoomBlock = mongoose.model('RoomBlock', roomBlockSchema);
 export const HistoryLog = mongoose.model('HistoryLog', historyLogSchema);
 export const Notification = mongoose.model('Notification', notificationSchema);
+export const Setting = mongoose.model('Setting', settingSchema);

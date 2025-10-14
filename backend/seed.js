@@ -3,11 +3,11 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
 import bcrypt from 'bcryptjs';
-import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notification } from './models.js';
+import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notification, Setting } from './models.js';
 
 const users = [
     { name: 'Dr. Evelyn Reed', role: 'Principal', department: 'Administration', email: 'principal@college.edu', password: 'password123' },
-    { name: 'Dr. Samuel Chen', role: 'Dean', department: 'Academics', email: 'dean@college.edu', password: 'password123' },
+    { name: 'Dr. Samuel Chen', role: 'Dean', department: 'Academics', email: 'dean@college.edu', password: 'password123', isIqacDean: true },
     { name: 'Prof. Aisha Khan', role: 'HOD', department: 'Computer Science', email: 'hod.cs@college.edu', password: 'password123' },
     { name: 'General Faculty', role: 'Faculty', department: 'General', email: 'faculty@college.edu', password: 'password123' },
 ];
@@ -40,6 +40,7 @@ const importData = async () => {
     await RoomBlock.deleteMany();
     await HistoryLog.deleteMany();
     await Notification.deleteMany();
+    await Setting.deleteMany();
 
     // Manually hash passwords to ensure they are stored correctly
     const usersWithHashedPasswords = await Promise.all(
@@ -56,6 +57,9 @@ const importData = async () => {
     
     await Classroom.insertMany(classrooms);
     console.log('Classrooms Imported!');
+
+    await Setting.create({ key: 'deanApprovalRequired', value: 'true' });
+    console.log('Settings Imported!');
 
     console.log('Data Imported!');
     process.exit();
@@ -74,6 +78,7 @@ const destroyData = async () => {
     await RoomBlock.deleteMany();
     await HistoryLog.deleteMany();
     await Notification.deleteMany();
+    await Setting.deleteMany();
     
     console.log('Data Destroyed!');
     process.exit();

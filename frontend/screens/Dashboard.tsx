@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Booking, User, Classroom, UserRole, WaitlistEntry } from '../types';
 import { formatTime12h } from '../constants';
@@ -11,6 +12,7 @@ interface DashboardProps {
   onQuickBook: () => void;
   onApproveBooking: (bookingId: string) => void;
   onDeclineBooking: (bookingId: string) => void;
+  isApprovalEnabled: boolean;
 }
 
 const DashboardCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className = '' }) => (
@@ -35,8 +37,8 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
         }
 
         return records
-            .filter(b => b.createdAt >= twoMonthsAgo && b.status === 'confirmed')
-            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+            .filter(b => new Date(b.createdAt) >= twoMonthsAgo && b.status === 'confirmed')
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 5) // Show top 5 recent for dashboard
             .map((b, index) => {
                 const user = users.find(u => u._id === b.userId);
@@ -45,7 +47,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
                     'S.NO': index + 1,
                     'Staff Name': b.staffName,
                     'Department': user?.department || 'N/A',
-                    'Booking On': b.createdAt.toLocaleDateString(),
+                    'Booking On': new Date(b.createdAt).toLocaleDateString(),
                     'Class On': new Date(b.date).toLocaleDateString(),
                     'Period': b.period,
                 };
@@ -119,20 +121,18 @@ const ApprovalDashboard: React.FC<{
 );
 
 
-const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms, waitlist, users, onQuickBook, onApproveBooking, onDeclineBooking }) => {
+const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms, users, onQuickBook, onApproveBooking, onDeclineBooking, isApprovalEnabled }) => {
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  const userBookings = bookings.filter(b => b.userId === currentUser._id && new Date(b.date) >= today && b.status === 'confirmed');
+  const userBookings = bookings.filter(b => b.userId === currentUser._id && new Date(b.date) >= today && ['confirmed', 'pending'].includes(b.status));
   userBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
-  const userWaitlist = waitlist.filter(w => w.userId === currentUser._id);
-
   const totalBookings = bookings.filter(b => b.status === 'confirmed').length;
   const availableRooms = classrooms.filter(c => c.status === 'available').length;
   const blockedRooms = classrooms.filter(c => c.status === 'maintenance');
   
-  const pendingBookings = useMemo(() => bookings.filter(b => b.status === 'pending').sort((a,b) => a.createdAt.getTime() - b.createdAt.getTime()), [bookings]);
+  const pendingBookings = useMemo(() => bookings.filter(b => b.status === 'pending').sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()), [bookings]);
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 dark:bg-dark-bg min-h-full">
@@ -146,109 +146,42 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
       </div>
 
       <div className="space-y-6">
-            {[UserRole.Principal, UserRole.Dean].includes(currentUser.role) && (
-                <>
-                    <ApprovalDashboard pendingBookings={pendingBookings} users={users} onApprove={onApproveBooking} onDecline={onDeclineBooking} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <DashboardCard title="System Stats">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Bookings</span><span className="font-bold text-2xl text-primary dark:text-primary-dark">{totalBookings}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Your Bookings</span><span className="font-bold text-2xl text-secondary dark:text-secondary-dark">{userBookings.length}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Users</span><span className="font-bold text-2xl text-yellow-500">{users.length}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Available Rooms</span><span className="font-bold text-2xl text-green-500">{availableRooms}</span></div>
-                            </div>
-                        </DashboardCard>
-                        
-                        <DashboardCard title="Blocked Rooms" className="lg:col-span-1">
-                           <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {blockedRooms.length > 0 ? (
-                                    blockedRooms.map(r => ( <div key={r._id} className="p-2 bg-red-100 dark:bg-red-900/50 rounded-md text-center"><p className="font-semibold text-red-800 dark:text-red-300 text-sm truncate">{r.name}</p></div>))
-                                ) : <p className="text-gray-500 dark:text-gray-400 text-center pt-12">No rooms are currently blocked.</p>}
-                            </div>
-                        </DashboardCard>
-
-                        <DashboardCard title="Upcoming Bookings" className="lg:col-span-2">
-                           <div className="space-y-3 max-h-48 overflow-y-auto">
-                                {userBookings.length > 0 ? userBookings.slice(0, 5).map(b => {
-                                    const room = classrooms.find(c => c._id === b.classroomId);
-                                    return (
-                                        <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex justify-between items-center">
-                                            <div><p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p><p className="text-sm text-gray-500 dark:text-gray-400">{room?.name} on {new Date(b.date).toLocaleDateString()}</p></div>
-                                            <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{formatTime12h(b.startTime)} - {formatTime12h(b.endTime)}</span>
-                                        </div>
-                                    )
-                                }) : <p className="text-gray-500 dark:text-gray-400">You have no upcoming bookings.</p>}
-                            </div>
-                        </DashboardCard>
-                    </div>
-                    <BookingRecordDetailsCard bookings={bookings} users={users} currentUser={currentUser} />
-                </>
+            { isApprovalEnabled && currentUser.isIqacDean && (
+                 <ApprovalDashboard pendingBookings={pendingBookings} users={users} onApprove={onApproveBooking} onDecline={onDeclineBooking} />
+            )}
+            
+            {currentUser.role === UserRole.Principal && (
+                 <BookingRecordDetailsCard bookings={bookings} users={users} currentUser={currentUser} />
             )}
 
-            {currentUser.role === UserRole.HOD && (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <DashboardCard title="System Stats">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Bookings</span><span className="font-bold text-2xl text-primary dark:text-primary-dark">{totalBookings}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Your Bookings</span><span className="font-bold text-2xl text-secondary dark:text-secondary-dark">{userBookings.length}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Users</span><span className="font-bold text-2xl text-yellow-500">{users.length}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Available Rooms</span><span className="font-bold text-2xl text-green-500">{availableRooms}</span></div>
-                            </div>
-                        </DashboardCard>
-                         <DashboardCard title="Quick Actions">
-                            <button onClick={onQuickBook} className="w-full bg-primary dark:bg-primary-dark text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 transition-colors text-lg">
-                                Book a Slot
-                            </button>
-                        </DashboardCard>
-                        <DashboardCard title="Upcoming Bookings" className="lg:col-span-2">
-                             <div className="space-y-3 max-h-48 overflow-y-auto">
-                                {userBookings.length > 0 ? userBookings.slice(0, 5).map(b => {
-                                    const room = classrooms.find(c => c._id === b.classroomId);
-                                    return (
-                                        <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex justify-between items-center">
-                                            <div><p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p><p className="text-sm text-gray-500 dark:text-gray-400">{room?.name} on {new Date(b.date).toLocaleDateString()}</p></div>
-                                            <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{formatTime12h(b.startTime)} - {formatTime12h(b.endTime)}</span>
-                                        </div>
-                                    )
-                                }) : <p className="text-gray-500 dark:text-gray-400">You have no upcoming bookings.</p>}
-                            </div>
-                        </DashboardCard>
-                         {userWaitlist.length > 0 && (
-                            <DashboardCard title="My Waitlisted Slots" className="lg:col-span-4">
-                                <div className="space-y-3 max-h-48 overflow-y-auto">
-                                    {userWaitlist.map(w => {
-                                        const room = classrooms.find(c => c._id === w.classroomId);
-                                        return (<div key={w._id} className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-md flex justify-between items-center"><div><p className="font-semibold text-orange-800 dark:text-orange-200">{room?.name}</p><p className="text-sm text-orange-600 dark:text-orange-400">On {new Date(w.date).toLocaleDateString()}</p></div><span className="font-mono text-sm bg-orange-200 text-orange-800 dark:bg-orange-800 dark:text-orange-200 px-2 py-1 rounded">{formatTime12h(w.startTime)} - {formatTime12h(w.endTime)}</span></div>)
-                                    })}
-                                </div>
-                            </DashboardCard>
-                        )}
-                    </div>
-                    <BookingRecordDetailsCard bookings={bookings} users={users} currentUser={currentUser} />
-                </>
-            )}
-
-            {currentUser.role === UserRole.Faculty && (
+            {[UserRole.Dean, UserRole.HOD, UserRole.Faculty].includes(currentUser.role) && (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <DashboardCard title="System Stats">
                         <div className="space-y-3">
-                            <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Bookings</span><span className="font-bold text-2xl text-primary dark:text-primary-dark">{totalBookings}</span></div>
-                            <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Users</span><span className="font-bold text-2xl text-yellow-500">{users.length}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Confirmed</span><span className="font-bold text-2xl text-primary dark:text-primary-dark">{totalBookings}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">My Bookings</span><span className="font-bold text-2xl text-secondary dark:text-secondary-dark">{userBookings.length}</span></div>
                             <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Available Rooms</span><span className="font-bold text-2xl text-green-500">{availableRooms}</span></div>
                         </div>
                     </DashboardCard>
-                    <DashboardCard title="Upcoming Bookings" className="lg:col-span-3">
-                        <div className="space-y-3 max-h-48 overflow-y-auto">
+
+                    <DashboardCard title="Upcoming/Pending Bookings" className="lg:col-span-3">
+                       <div className="space-y-3 max-h-48 overflow-y-auto">
                             {userBookings.length > 0 ? userBookings.slice(0, 5).map(b => {
                                 const room = classrooms.find(c => c._id === b.classroomId);
+                                const isPending = b.status === 'pending';
                                 return (
-                                    <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex justify-between items-center">
-                                        <div><p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p><p className="text-sm text-gray-500 dark:text-gray-400">{room?.name} on {new Date(b.date).toLocaleDateString()}</p></div>
-                                        <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{formatTime12h(b.startTime)} - {formatTime12h(b.endTime)}</span>
+                                    <div key={b._id} className={`p-3 rounded-md flex justify-between items-center ${isPending ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-gray-50 dark:bg-gray-700'}`}>
+                                        <div>
+                                            <p className={`font-semibold ${isPending ? 'text-yellow-800 dark:text-yellow-200' : 'text-gray-800 dark:text-gray-200'}`}>{b.subject} ({b.classYear})</p>
+                                            <p className={`text-sm ${isPending ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400'}`}>{room?.name} on {new Date(b.date).toLocaleDateString()}</p>
+                                        </div>
+                                        <div className='flex items-center space-x-2'>
+                                            {isPending && <span className="font-bold text-xs text-yellow-800 dark:text-yellow-200 uppercase">Pending</span>}
+                                            <span className="font-mono text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">{formatTime12h(b.startTime)}</span>
+                                        </div>
                                     </div>
                                 )
-                            }) : <p className="text-gray-500 dark:text-gray-400">No bookings are assigned to this general account.</p>}
+                            }) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">You have no upcoming bookings or pending requests.</p>}
                         </div>
                     </DashboardCard>
                 </div>
