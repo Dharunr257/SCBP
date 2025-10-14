@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { axiosInstance } from './utils/axios';
 
@@ -29,6 +28,7 @@ interface ToastNotification extends Omit<AppNotification, '_id' | 'timestamp' | 
 }
 
 type Theme = 'light' | 'dark';
+type BookingModalMode = 'create' | 'edit' | 'override';
 
 const App: React.FC = () => {
     // State
@@ -54,7 +54,7 @@ const App: React.FC = () => {
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [bookingToEdit, setBookingToEdit] = useState<(Booking & { date: string; startTime: string; endTime: string; }) | null>(null);
     const [initialSlot, setInitialSlot] = useState<{ date: string; startTime: string; classroomId: string } | undefined>(undefined);
-    const [isOverriding, setIsOverriding] = useState(false);
+    const [bookingModalMode, setBookingModalMode] = useState<BookingModalMode>('create');
 
     const isApprovalEnabled = useMemo(() => settings.find(s => s.key === 'deanApprovalRequired')?.value === 'true', [settings]);
     
@@ -162,17 +162,23 @@ const App: React.FC = () => {
     };
     
     // Data modification handlers
-    const handleSaveBooking = async (bookingData: Omit<Booking, '_id' | 'status' | 'period' | 'startTime' | 'endTime' | 'createdAt'> & { _id?: string; periods: number[] }, isOverride: boolean): Promise<boolean> => {
+    const handleSaveBooking = async (bookingData: Omit<Booking, '_id' | 'status' | 'period' | 'startTime' | 'endTime' | 'createdAt'> & { _id?: string; periods: number[] }, mode: BookingModalMode): Promise<boolean> => {
         if (!currentUser) return false;
         
         try {
-            if (bookingData._id) { // Editing
+            if (mode === 'edit' && bookingData._id) {
                 const periodInfo = PERIODS.find(p => p.period === bookingData.periods[0]);
                 if (!periodInfo) return false;
                 const payload = { ...bookingData, period: bookingData.periods[0], startTime: periodInfo.startTime, endTime: periodInfo.endTime };
                 await axiosInstance.post(`/bookings`, payload);
                 showToast('Booking updated successfully!', 'success');
-            } else { // Creating
+            } else if (mode === 'override' && bookingData._id) {
+                const periodInfo = PERIODS.find(p => p.period === bookingData.periods[0]);
+                if (!periodInfo) return false;
+                const payload = { ...bookingData, period: bookingData.periods[0], startTime: periodInfo.startTime, endTime: periodInfo.endTime };
+                await axiosInstance.post(`/bookings/${bookingData._id}/override`, payload);
+                showToast('Booking overridden successfully!', 'success');
+            } else { // 'create'
                 const newBookingPayloads = bookingData.periods.map(period => {
                     const periodInfo = PERIODS.find(p => p.period === period);
                     return {
@@ -192,7 +198,6 @@ const App: React.FC = () => {
             setIsBookingModalOpen(false);
             setBookingToEdit(null);
             setInitialSlot(undefined);
-            setIsOverriding(false);
             return true;
         } catch (error: any) {
             const message = error.response?.data?.message || 'Failed to save booking.';
@@ -230,6 +235,7 @@ const App: React.FC = () => {
                 await axiosInstance.delete(`/bookings/${bookingId}`);
                 await fetchAllData();
                 showToast('Booking deleted!', 'success');
+                setIsBookingModalOpen(false); // Close modal if open
             } catch (error: any) {
                 const message = error.response?.data?.message || 'Failed to delete booking.';
                 showToast(message, 'error');
@@ -285,11 +291,11 @@ const App: React.FC = () => {
         }
     };
 
-    const handleUpdateClassroom = async (classroom: Classroom) => {
+    const handleUpdateClassroom = async (classroomId: string, updates: Partial<Pick<Classroom, 'name' | 'status'>>) => {
         try {
-            await axiosInstance.put(`/classrooms/${classroom._id}`, { status: classroom.status });
+            await axiosInstance.put(`/classrooms/${classroomId}`, updates);
             await fetchAllData();
-            showToast(`Classroom ${classroom.name} status updated.`, 'success');
+            showToast(`Classroom updated.`, 'success');
         } catch(e: any) { 
             const message = e.response?.data?.message || 'Failed to update classroom';
             showToast(message, 'error');
@@ -367,7 +373,7 @@ const App: React.FC = () => {
     const handleOpenBookingModal = (slot?: { date: string, startTime: string, classroomId: string }) => {
         setInitialSlot(slot);
         setBookingToEdit(null);
-        setIsOverriding(false);
+        setBookingModalMode('create');
         setIsBookingModalOpen(true);
     };
 
@@ -380,7 +386,20 @@ const App: React.FC = () => {
         };
         setBookingToEdit(fullBooking);
         setInitialSlot(undefined);
-        setIsOverriding(false);
+        setBookingModalMode('edit');
+        setIsBookingModalOpen(true);
+    };
+
+    const handleOverrideBooking = (booking: Booking) => {
+        const fullBooking = {
+            ...booking,
+            date: booking.date,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+        };
+        setBookingToEdit(fullBooking);
+        setInitialSlot(undefined);
+        setBookingModalMode('override');
         setIsBookingModalOpen(true);
     };
     
@@ -423,6 +442,7 @@ const App: React.FC = () => {
                     onBookSlot={handleOpenBookingModal}
                     onEditBooking={handleEditBooking}
                     onDeleteBooking={handleDeleteBooking}
+                    onOverrideBooking={handleOverrideBooking}
                 />;
              case 'Approval Requests':
                 return <ApprovalRequests
@@ -526,9 +546,10 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     bookingToEdit={bookingToEdit}
                     initialSlot={initialSlot}
-                    isOverriding={isOverriding}
+                    mode={bookingModalMode}
                     isApprovalEnabled={isApprovalEnabled}
                     users={users}
+                    onDelete={handleDeleteBooking}
                 />
             )}
             <NotificationCenter notifications={toastNotifications} />

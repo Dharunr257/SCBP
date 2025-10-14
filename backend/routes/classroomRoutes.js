@@ -1,8 +1,7 @@
-
 import express from 'express';
 const router = express.Router();
 import { 
-    updateClassroomStatus, 
+    updateClassroom, 
     createRoomBlock, 
     deleteRoomBlock,
     createClassroom,
@@ -14,7 +13,7 @@ router.route('/')
     .post(protect, createClassroom);
 
 router.route('/:id')
-    .put(protect, updateClassroomStatus)
+    .put(protect, updateClassroom)
     .delete(protect, deleteClassroom);
 
 router.route('/blocks')

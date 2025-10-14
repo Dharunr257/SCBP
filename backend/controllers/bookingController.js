@@ -1,4 +1,3 @@
-
 import { Booking, Setting, User, Notification } from '../models.js';
 import { createLog } from '../utils/logger.js';
 
@@ -30,19 +29,11 @@ export const createOrUpdateBooking = async (req, res) => {
                 return res.status(404).json({ message: 'Booking not found.' });
              }
 
-             const originalOwner = await User.findById(bookingToEdit.userId);
-             if (!originalOwner) {
-                // This case might happen if user was deleted. Still, we should block.
-                return res.status(404).json({ message: 'Original owner of the booking not found.' });
-             }
-
              const isOwner = bookingToEdit.userId.toString() === req.user._id.toString();
-             const isPrincipal = req.user.role === 'Principal';
-             const isIqacDean = req.user.isIqacDean;
-             const hasRoleSuperiority = rolePower[req.user.role] > rolePower[originalOwner.role];
-
-             if (!isOwner && !isPrincipal && !isIqacDean && !hasRoleSuperiority) {
-                 return res.status(403).json({ message: 'You are not authorized to edit this booking.' });
+             
+             // Only the owner can edit directly. Superiors must override.
+             if (!isOwner) {
+                 return res.status(403).json({ message: 'You are not authorized to edit this booking. Use the override feature if you have higher authority.' });
              }
              
              // The frontend sends `period`, `startTime`, `endTime` in the payload for edits.
@@ -81,6 +72,55 @@ export const createOrUpdateBooking = async (req, res) => {
         }
     } catch (error) {
         res.status(400).json({ message: 'Error saving booking', error: error.message });
+    }
+};
+
+// @desc    Override a booking
+// @route   POST /api/bookings/:id/override
+// @access  Private
+export const overrideBooking = async (req, res) => {
+    try {
+        const bookingToOverride = await Booking.findById(req.params.id);
+        if (!bookingToOverride) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        const originalOwner = await User.findById(bookingToOverride.userId);
+        if (!originalOwner) {
+            return res.status(404).json({ message: 'Original owner of the booking not found.' });
+        }
+        
+        const hasRoleSuperiority = rolePower[req.user.role] > rolePower[originalOwner.role];
+        const isPrincipalOrIqac = req.user.role === 'Principal' || req.user.isIqacDean;
+
+        if (!hasRoleSuperiority && !isPrincipalOrIqac) {
+            return res.status(403).json({ message: 'You do not have sufficient permissions to override this booking.' });
+        }
+
+        const { _id, periods, ...updateData } = req.body;
+        
+        const overridePayload = {
+            ...updateData,
+            userId: req.user._id,
+            originalUserId: bookingToOverride.userId,
+            status: 'overridden',
+        };
+        
+        const overriddenBooking = await Booking.findByIdAndUpdate(req.params.id, overridePayload, { new: true });
+
+        // Notify original user
+        await Notification.create({
+            userId: bookingToOverride.userId,
+            message: `Your booking for ${bookingToOverride.subject} on ${bookingToOverride.date} has been overridden by ${req.user.name}.`,
+            type: 'error'
+        });
+        
+        await createLog(req.user, 'Overridden', `Overridden booking for subject ${bookingToOverride.subject} originally by ${originalOwner.name}`);
+        
+        res.status(200).json(overriddenBooking);
+
+    } catch (error) {
+        res.status(400).json({ message: 'Error overriding booking', error: error.message });
     }
 };
 

@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -55,6 +54,7 @@ const bookingSchema = new mongoose.Schema({
     staffName: { type: String, required: true },
     contactNo: { type: String, required: true },
     period: { type: Number, required: true },
+    originalUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: { createdAt: 'createdAt' } });
 
 

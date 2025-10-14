@@ -1,4 +1,3 @@
-
 export enum UserRole {
   Principal = "Principal",
   Dean = "Dean",
@@ -43,6 +42,7 @@ export interface Booking {
   contactNo: string;
   period: number;
   createdAt: Date;
+  originalUserId?: string;
 }
 
 export interface WaitlistEntry {

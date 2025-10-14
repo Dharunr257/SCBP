@@ -1,10 +1,60 @@
-
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Classroom, User, UserRole, LogAction, RoomBlock } from '../types';
-import { PlusIcon, TrashIcon, CloseIcon } from '../components/Icons';
+import { PlusIcon, TrashIcon, CloseIcon, EditIcon } from '../components/Icons';
 import { PERIODS } from '../constants';
 import { Spinner } from '../components/Spinner';
+
+interface EditRoomModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (id: string, name: string) => Promise<void>;
+  room: Classroom | null;
+}
+
+const EditRoomModal: React.FC<EditRoomModalProps> = ({ isOpen, onClose, onSave, room }) => {
+    const [name, setName] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (room) {
+            setName(room.name);
+        }
+    }, [room]);
+
+    if (!isOpen || !room) return null;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        setLoading(true);
+        await onSave(room._id, name.trim());
+        setLoading(false);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl p-8 w-full max-w-md relative">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                    <CloseIcon className="h-6 w-6" />
+                </button>
+                <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Edit Classroom</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label htmlFor="room-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Classroom Name</label>
+                        <input id="room-name" type="text" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+                    </div>
+                    <div className="flex justify-end pt-4">
+                        <button type="button" onClick={onClose} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                        <button type="submit" disabled={loading} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 w-36 h-10 flex justify-center items-center disabled:bg-gray-400">
+                            {loading ? <Spinner size="sm" color="text-white" /> : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 interface BlockRoomModalProps {
   isOpen: boolean;
@@ -105,7 +155,7 @@ interface RoomManagementProps {
   classrooms: Classroom[];
   roomBlocks: RoomBlock[];
   users: User[];
-  onUpdateClassroom: (classroom: Classroom) => Promise<void>;
+  onUpdateClassroom: (classroomId: string, updates: Partial<Pick<Classroom, 'name' | 'status'>>) => Promise<void>;
   onAddBlock: (blockData: Omit<RoomBlock, '_id' | 'userId'>) => Promise<void>;
   onDeleteBlock: (blockId: string) => Promise<void>;
   onAddClassroom: (name: string) => Promise<void>;
@@ -114,6 +164,8 @@ interface RoomManagementProps {
 
 const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms, roomBlocks, users, onUpdateClassroom, onAddBlock, onDeleteBlock, onAddClassroom, onDeleteClassroom }) => {
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [roomToEdit, setRoomToEdit] = useState<Classroom | null>(null);
   const [newRoomName, setNewRoomName] = useState('');
   const [isAddingRoom, setIsAddingRoom] = useState(false);
   const [actionsLoading, setActionsLoading] = useState<{[key: string]: boolean}>({});
@@ -131,7 +183,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
   const handleToggleMaintenance = async (room: Classroom) => {
     setActionsLoading(prev => ({...prev, [`status-${room._id}`]: true}));
     const newStatus = room.status === 'available' ? 'maintenance' : 'available';
-    await onUpdateClassroom({ ...room, status: newStatus });
+    await onUpdateClassroom(room._id, { status: newStatus });
     setActionsLoading(prev => ({...prev, [`status-${room._id}`]: false}));
   };
   
@@ -143,6 +195,11 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
           setNewRoomName('');
           setIsAddingRoom(false);
       }
+  };
+
+  const handleEditRoom = (room: Classroom) => {
+    setRoomToEdit(room);
+    setIsEditModalOpen(true);
   };
   
   const handleDeleteRoom = async (id: string, name: string) => {
@@ -205,6 +262,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
                     </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        <button onClick={() => handleEditRoom(room)} className="font-bold py-1 px-3 rounded-lg text-xs bg-gray-500 hover:bg-gray-600 text-white w-20 h-7 flex justify-center items-center"><EditIcon className="w-4 h-4 mr-1"/> Edit</button>
                         <button onClick={() => handleToggleMaintenance(room)} disabled={actionsLoading[`status-${room._id}`]} className={`font-bold py-1 px-3 rounded-lg text-xs w-32 h-7 flex justify-center items-center ${room.status === 'available' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-green-500 hover:bg-green-600 text-white'} disabled:bg-gray-400`}>
                             {actionsLoading[`status-${room._id}`] ? <Spinner size="sm" color="text-white"/> : (room.status === 'available' ? 'Set Maintenance' : 'Set Available')}
                         </button>
@@ -267,6 +325,12 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
         onSave={onAddBlock}
         classrooms={classrooms}
         currentUser={currentUser}
+      />
+      <EditRoomModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        room={roomToEdit}
+        onSave={async (id, name) => await onUpdateClassroom(id, { name })}
       />
     </div>
   );

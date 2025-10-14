@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon } from '../components/Icons';
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, EditIcon, TrashIcon } from '../components/Icons';
 import DatePicker from '../components/DatePicker';
 
 interface BookingCalendarProps {
@@ -15,6 +14,7 @@ interface BookingCalendarProps {
   onBookSlot: (slot: { date: string; startTime: string; classroomId: string }) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (bookingId: string) => void;
+  onOverrideBooking: (booking: Booking) => void;
 }
 
 type CalendarView = 'Daily' | 'Monthly';
@@ -41,11 +41,10 @@ const getMonthCalendarDays = (date: Date): Date[] => {
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
 
-const canEditBooking = (currentUser: User, booking: Booking, users: User[]): boolean => {
+const canOverrideBooking = (currentUser: User, booking: Booking, users: User[]): boolean => {
     const bookingOwner = users.find(u => u._id === booking.userId);
-    if (!bookingOwner) return false;
+    if (!bookingOwner || currentUser._id === booking.userId) return false;
 
-    if (currentUser._id === booking.userId) return true;
     if (currentUser.role === UserRole.Principal || currentUser.isIqacDean) return true;
 
     const rolePower = {
@@ -58,7 +57,7 @@ const canEditBooking = (currentUser: User, booking: Booking, users: User[]): boo
     return rolePower[currentUser.role] > rolePower[bookingOwner.role];
 };
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking, onDeleteBooking, onOverrideBooking }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarView>('Daily');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -88,7 +87,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     const bookingsBySlot = useMemo(() => {
         const map = new Map<string, Booking>();
-        bookings.filter(b => b.status === 'confirmed').forEach(b => {
+        bookings.filter(b => b.status === 'confirmed' || b.status === 'overridden').forEach(b => {
             const key = `${b.date}-${b.startTime}-${b.classroomId}`;
             map.set(key, b);
         });
@@ -193,27 +192,37 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
         if (booking) {
             const user = users.find(u => u._id === booking.userId);
-            const isOwnBooking = currentUser._id === booking.userId;
-            const bookingColor = isOwnBooking ? 'bg-secondary' : 'bg-booked';
-            const isEditable = canEditBooking(currentUser, booking, users);
+            const isOwner = currentUser._id === booking.userId;
+            const canOverride = canOverrideBooking(currentUser, booking, users);
             
+            let bookingColor = 'bg-booked';
+            if (isOwner) bookingColor = 'bg-secondary';
+            if (booking.status === 'overridden') bookingColor = 'bg-purple-500';
+
             return (
-                <button 
-                    onClick={() => onEditBooking(booking)} 
-                    disabled={!isEditable}
-                    className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between ${isEditable ? 'group' : 'cursor-not-allowed'} relative overflow-hidden w-full text-left`}
-                    >
+                <div className={`${bookingColor} text-white p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
                     <div className="flex-grow">
                         <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
-                        <p className="text-black/70 text-[11px] truncate">{user?.department}</p>
+                        <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
                         <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
+                         {booking.status === 'overridden' && (
+                            <p className="text-white/80 text-[10px] font-semibold mt-1">Overridden</p>
+                         )}
                     </div>
-                     {isEditable && 
-                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 rounded-md text-center">
-                            <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View/Edit</span>
+                     {(isOwner || canOverride) && 
+                        <div className="absolute inset-0 bg-black bg-opacity-60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1 rounded-md text-center space-y-1">
+                            {isOwner && (
+                                <>
+                                <button onClick={() => onEditBooking(booking)} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold flex items-center justify-center"><EditIcon className="w-3 h-3 mr-1.5"/> Edit</button>
+                                <button onClick={() => onDeleteBooking(booking._id)} className="w-full text-center py-1.5 px-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold flex items-center justify-center"><TrashIcon className="w-3 h-3 mr-1.5"/> Delete</button>
+                                </>
+                            )}
+                            {canOverride && (
+                                <button onClick={() => onOverrideBooking(booking)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold flex items-center justify-center">Override</button>
+                            )}
                         </div>
                      }
-                </button>
+                </div>
             )
         }
 
@@ -328,7 +337,12 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                     {dayBookings.slice(0, 3).map(booking => {
                                         const isOwnBooking = booking.userId === currentUser._id;
                                         const isPending = booking.status === 'pending';
-                                        const bgColor = isPending ? 'bg-yellow-200/80' : isOwnBooking ? 'bg-secondary/80' : 'bg-booked/80';
+                                        const isOverridden = booking.status === 'overridden';
+                                        let bgColor = 'bg-booked/80';
+                                        if (isPending) bgColor = 'bg-yellow-200/80';
+                                        if (isOwnBooking) bgColor = 'bg-secondary/80';
+                                        if (isOverridden) bgColor = 'bg-purple-400/80';
+                                        
                                         return (
                                             <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>
                                                 <div className="flex items-center">

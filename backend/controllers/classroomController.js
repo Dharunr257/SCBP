@@ -1,4 +1,3 @@
-
 import { Classroom, RoomBlock, Booking, WaitlistEntry } from '../models.js';
 import { createLog } from '../utils/logger.js';
 
@@ -46,16 +45,35 @@ export const deleteClassroom = async (req, res) => {
 };
 
 
-// @desc    Update classroom status
+// @desc    Update classroom details (name, status)
 // @route   PUT /api/classrooms/:id
 // @access  Private
-export const updateClassroomStatus = async (req, res) => {
+export const updateClassroom = async (req, res) => {
     try {
-        const { status } = req.body;
-        const classroom = await Classroom.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const { name, status } = req.body;
+        const updateFields = {};
+
+        if (name) {
+             const classroomExists = await Classroom.findOne({ name, _id: { $ne: req.params.id } });
+             if (classroomExists) {
+                 return res.status(400).json({ message: 'Another classroom with this name already exists' });
+             }
+             updateFields.name = name;
+        }
+        if (status) {
+            updateFields.status = status;
+        }
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ message: 'No update fields provided.' });
+        }
+
+        const classroom = await Classroom.findByIdAndUpdate(req.params.id, updateFields, { new: true });
         if(classroom) {
-            const action = status === 'maintenance' ? 'Maintenance Set' : 'Maintenance Cleared';
-            await createLog(req.user, action, `Set status for ${classroom.name} to ${status}`);
+            let logDetails = `Updated classroom ${classroom.name}.`;
+            if (name) logDetails += ` Name changed to ${name}.`;
+            if (status) logDetails += ` Status changed to ${status}.`;
+            await createLog(req.user, 'Room Edited', logDetails);
             res.json(classroom);
         } else {
             res.status(404).json({ message: 'Classroom not found' });
