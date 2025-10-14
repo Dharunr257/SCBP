@@ -1,0 +1,503 @@
+
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { axiosInstance } from './utils/axios';
+
+// Import types
+import { User, UserRole, Booking, Classroom, WaitlistEntry, RoomBlock, HistoryLog, LogAction, Notification as AppNotification } from './types';
+import { PERIODS } from './constants';
+
+// Import components and screens
+import LoginScreen from './screens/LoginScreen';
+import { Header } from './components/Header';
+import Sidebar from './components/Sidebar';
+import BottomNavBar from './components/BottomNavBar';
+import Dashboard from './screens/Dashboard';
+import BookingCalendar from './screens/BookingCalendar';
+import RoomManagement from './screens/RoomManagement';
+import UserManagement from './screens/UserManagement';
+import Reports from './screens/Reports';
+// FIX: Changed import for HistoryLogs from default to named.
+import { HistoryLogs } from './screens/HistoryLogs';
+import Settings from './screens/Settings';
+import Waitlist from './screens/Waitlist';
+import { BookingModal } from './components/BookingModal';
+import NotificationCenter from './components/Notification';
+
+interface ToastNotification extends Omit<AppNotification, '_id' | 'timestamp' | 'read' | 'userId'> {
+    id: number;
+}
+
+const App: React.FC = () => {
+    // State
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [loginError, setLoginError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeView, setActiveView] = useState('Dashboard');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+    // Data states
+    const [users, setUsers] = useState<User[]>([]);
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+    const [roomBlocks, setRoomBlocks] = useState<RoomBlock[]>([]);
+    const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
+    const [toastNotifications, setToastNotifications] = useState<ToastNotification[]>([]);
+
+    // Modal states
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [bookingToEdit, setBookingToEdit] = useState<(Booking & { date: string; startTime: string; endTime: string; }) | null>(null);
+    const [initialSlot, setInitialSlot] = useState<{ date: string; startTime: string; classroomId: string } | undefined>(undefined);
+    const [isOverriding, setIsOverriding] = useState(false);
+    
+    const showToast = useCallback((message: string, type: 'success' | 'info' | 'error') => {
+        const newToast: ToastNotification = { id: Date.now(), message, type };
+        setToastNotifications(prev => [...prev, newToast]);
+        setTimeout(() => {
+            setToastNotifications(prev => prev.filter(t => t.id !== newToast.id));
+        }, 3000);
+    }, []);
+    
+    const handleLogout = useCallback(() => {
+        setCurrentUser(null);
+        localStorage.removeItem('token');
+        setActiveView('Dashboard');
+        showToast('You have been logged out.', 'info');
+    }, [showToast]);
+    
+    const fetchAllData = useCallback(async () => {
+        try {
+            const { data } = await axiosInstance.get('/data/all');
+            setUsers(data.users);
+            setClassrooms(data.classrooms);
+            setBookings(data.bookings);
+            setWaitlist(data.waitlist);
+            setRoomBlocks(data.roomBlocks);
+            setHistoryLogs(data.historyLogs);
+            setNotifications(data.notifications);
+        } catch (error: any) {
+            console.error("Failed to fetch data:", error);
+            const message = error.response?.data?.message || 'Failed to load application data.';
+            showToast(message, 'error');
+        }
+    }, [showToast]);
+
+    // Auth logic
+    useEffect(() => {
+        // Global error handler for unauthorized responses
+        const responseInterceptor = axiosInstance.interceptors.response.use(
+            response => response,
+            error => {
+                if (error.response && error.response.status === 401) {
+                    handleLogout();
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        const checkLoggedIn = async () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const { data: user } = await axiosInstance.get('/auth/me');
+                    setCurrentUser(user);
+                    await fetchAllData();
+                } catch (error) {
+                    // The interceptor will handle the logout if it's a 401
+                    console.error("Login check failed", error);
+                }
+            }
+            setIsLoading(false);
+        };
+        
+        checkLoggedIn();
+
+        // Cleanup interceptor on component unmount
+        return () => {
+            axiosInstance.interceptors.response.eject(responseInterceptor);
+        };
+    }, [fetchAllData, handleLogout]);
+    
+    const handleLogin = async (email: string, password: string) => {
+        setLoginError(null);
+        try {
+            const { data } = await axiosInstance.post('/auth/login', { email, password });
+            localStorage.setItem('token', data.token);
+            const { token, ...user } = data;
+            setCurrentUser(user);
+            await fetchAllData();
+            showToast('Login successful!', 'success');
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Invalid email or password.';
+            setLoginError(message);
+            showToast('Login failed.', 'error');
+        }
+    };
+    
+    // Data modification handlers
+    const handleSaveBooking = async (bookingData: Omit<Booking, '_id' | 'status' | 'period' | 'startTime' | 'endTime' | 'createdAt'> & { _id?: string; periods: number[] }, isOverride: boolean): Promise<boolean> => {
+        if (!currentUser) return false;
+        
+        try {
+            if (bookingData._id) { // Editing
+                const periodInfo = PERIODS.find(p => p.period === bookingData.periods[0]);
+                if (!periodInfo) return false;
+                const payload = { ...bookingData, period: bookingData.periods[0], startTime: periodInfo.startTime, endTime: periodInfo.endTime };
+                const { data: updatedBooking } = await axiosInstance.post(`/bookings`, payload);
+                setBookings(prev => prev.map(b => b._id === updatedBooking._id ? updatedBooking : b));
+                setHistoryLogs(prev => [updatedBooking.log, ...prev]);
+                showToast('Booking updated successfully!', 'success');
+            } else { // Creating
+                const newBookingPayloads = bookingData.periods.map(period => {
+                    const periodInfo = PERIODS.find(p => p.period === period);
+                    return {
+                        ...bookingData,
+                        userId: currentUser._id,
+                        status: currentUser.role === UserRole.Faculty ? 'pending' : 'confirmed',
+                        period,
+                        startTime: periodInfo?.startTime || "00:00",
+                        endTime: periodInfo?.endTime || "00:00",
+                    }
+                });
+                const { data: newBookings } = await axiosInstance.post('/bookings', { bookings: newBookingPayloads });
+                setBookings(prev => [...prev, ...newBookings]);
+                await fetchAllData();
+                showToast(`Successfully created ${newBookings.length} booking(s)!`, 'success');
+            }
+            
+            setIsBookingModalOpen(false);
+            setBookingToEdit(null);
+            setInitialSlot(undefined);
+            setIsOverriding(false);
+            return true;
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Failed to save booking.';
+            showToast(message, 'error');
+            return false;
+        }
+    };
+    
+    const handleChangePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string; }> => {
+        try {
+            const { data } = await axiosInstance.put('/users/password', { currentPassword, newPassword });
+            await fetchAllData();
+            return { success: true, message: data.message };
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'An error occurred.';
+            return { success: false, message };
+        }
+    };
+    
+    const handleUpdateProfile = async (userData: { name: string; email: string; }): Promise<{ success: boolean; message: string; }> => {
+        try {
+            const { data: updatedUser } = await axiosInstance.put('/users/profile', userData);
+            setCurrentUser(updatedUser);
+            await fetchAllData();
+            return { success: true, message: 'Profile updated successfully!' };
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'An error occurred.';
+            return { success: false, message };
+        }
+    };
+
+    const handleDeleteBooking = async (bookingId: string) => {
+        if (window.confirm('Are you sure you want to delete this booking?')) {
+            try {
+                await axiosInstance.delete(`/bookings/${bookingId}`);
+                setBookings(prev => prev.filter(b => b._id !== bookingId));
+                await fetchAllData();
+                showToast('Booking deleted!', 'success');
+            } catch (error: any) {
+                const message = error.response?.data?.message || 'Failed to delete booking.';
+                showToast(message, 'error');
+            }
+        }
+    };
+
+    const handleApproveBooking = async (bookingId: string) => {
+        try {
+            const { data: updatedBooking } = await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'confirmed' });
+            setBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
+            await fetchAllData();
+            showToast('Booking approved!', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to approve booking';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleDeclineBooking = async (bookingId: string) => {
+        try {
+            const { data: updatedBooking } = await axiosInstance.put(`/bookings/${bookingId}/status`, { status: 'declined' });
+            setBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
+            await fetchAllData();
+            showToast('Booking declined!', 'info');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to decline booking';
+            showToast(message, 'error');
+        }
+    };
+    
+    const handleAddClassroom = async (name: string) => {
+        try {
+            const { data: newClassroom } = await axiosInstance.post('/classrooms', { name });
+            setClassrooms(prev => [...prev, newClassroom].sort((a,b) => a.name.localeCompare(b.name)));
+            await fetchAllData();
+            showToast(`Classroom "${name}" added successfully.`, 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to add classroom.';
+            showToast(message, 'error');
+        }
+    };
+    
+    const handleDeleteClassroom = async (classroomId: string) => {
+        try {
+            await axiosInstance.delete(`/classrooms/${classroomId}`);
+            setClassrooms(prev => prev.filter(c => c._id !== classroomId));
+            await fetchAllData();
+            showToast('Classroom removed successfully.', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to remove classroom.';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleUpdateClassroom = async (classroom: Classroom) => {
+        try {
+            const { data: updated } = await axiosInstance.put(`/classrooms/${classroom._id}`, { status: classroom.status });
+            setClassrooms(prev => prev.map(c => c._id === updated._id ? updated : c));
+            await fetchAllData();
+            showToast(`Classroom ${classroom.name} status updated.`, 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to update classroom';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleAddBlock = async (blockData: Omit<RoomBlock, '_id' | 'userId'>) => {
+        try {
+            const { data: newBlock } = await axiosInstance.post('/classrooms/blocks', blockData);
+            setRoomBlocks(prev => [...prev, newBlock]);
+            await fetchAllData();
+            showToast('Room blocked successfully.', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to block room.';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleDeleteBlock = async (blockId: string) => {
+        try {
+            await axiosInstance.delete(`/classrooms/blocks/${blockId}`);
+            setRoomBlocks(prev => prev.filter(b => b._id !== blockId));
+            await fetchAllData();
+            showToast('Room block removed.', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to remove block.';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleAddUser = async (userData: Omit<User, '_id' | 'password'>) => {
+        try {
+            const { data: newUser } = await axiosInstance.post('/users', { ...userData, password: 'password123' });
+            setUsers(prev => [...prev, newUser]);
+            await fetchAllData();
+            showToast('User added successfully!', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to add user.';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleUpdateUser = async (user: User) => {
+        try {
+            const { data: updatedUser } = await axiosInstance.put(`/users/${user._id}`, user);
+            setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
+            await fetchAllData();
+            showToast('User updated successfully!', 'success');
+        } catch(e: any) { 
+            const message = e.response?.data?.message || 'Failed to update user.';
+            showToast(message, 'error');
+        }
+    };
+
+    const handleDeleteUser = async (userId: string) => {
+       try {
+           await axiosInstance.delete(`/users/${userId}`);
+           setUsers(prev => prev.filter(u => u._id !== userId));
+           await fetchAllData();
+           showToast('User deleted successfully!', 'success');
+       } catch(e: any) { 
+           const message = e.response?.data?.message || 'Failed to delete user.';
+           showToast(message, 'error');
+       }
+    };
+
+
+    // UI handlers
+    const handleOpenBookingModal = (slot?: { date: string, startTime: string, classroomId: string }) => {
+        setInitialSlot(slot);
+        setBookingToEdit(null);
+        setIsOverriding(false);
+        setIsBookingModalOpen(true);
+    };
+
+    const handleEditBooking = (booking: Booking) => {
+        const fullBooking = {
+            ...booking,
+            date: booking.date,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+        };
+        setBookingToEdit(fullBooking);
+        setInitialSlot(undefined);
+        setIsOverriding(false);
+        setIsBookingModalOpen(true);
+    };
+    
+    // Render logic
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-white">Loading...</div>;
+    }
+    
+    if (!currentUser) {
+        return <LoginScreen onLogin={handleLogin} error={loginError} />;
+    }
+
+    const unreadNotifications = notifications.filter(n => !n.read);
+
+    const renderActiveView = () => {
+        switch (activeView) {
+            case 'Dashboard':
+                return <Dashboard 
+                            currentUser={currentUser} 
+                            bookings={bookings} 
+                            classrooms={classrooms} 
+                            waitlist={waitlist} 
+                            users={users} 
+                            onQuickBook={handleOpenBookingModal}
+                            onApproveBooking={handleApproveBooking}
+                            onDeclineBooking={handleDeclineBooking}
+                        />;
+            case 'Bookings':
+                return <BookingCalendar 
+                    currentUser={currentUser}
+                    bookings={bookings}
+                    classrooms={classrooms}
+                    waitlist={waitlist}
+                    users={users}
+                    roomBlocks={roomBlocks}
+                    onBookSlot={handleOpenBookingModal}
+                    onJoinWaitlist={() => {}}
+                    onEditBooking={handleEditBooking}
+                    onDeleteBooking={handleDeleteBooking}
+                    onOverrideBooking={() => {}}
+                    onViewDetails={() => {}}
+                />;
+            case 'Room Management':
+                return <RoomManagement 
+                    currentUser={currentUser}
+                    classrooms={classrooms}
+                    roomBlocks={roomBlocks}
+                    users={users}
+                    onUpdateClassroom={handleUpdateClassroom}
+                    onAddBlock={handleAddBlock}
+                    onDeleteBlock={handleDeleteBlock}
+                    onAddClassroom={handleAddClassroom}
+                    onDeleteClassroom={handleDeleteClassroom}
+                />;
+            case 'User Management':
+                return <UserManagement 
+                    currentUser={currentUser}
+                    users={users}
+                    onAddUser={handleAddUser}
+                    onUpdateUser={handleUpdateUser}
+                    onDeleteUser={handleDeleteUser}
+                />;
+            case 'Reports':
+                return <Reports 
+                    bookings={bookings}
+                    users={users}
+                    classrooms={classrooms}
+                    currentUser={currentUser}
+                />;
+            case 'History Logs':
+                return <HistoryLogs logs={historyLogs} />;
+            case 'My Waitlist':
+                 return <Waitlist 
+                    currentUser={currentUser}
+                    waitlist={waitlist}
+                    classrooms={classrooms}
+                    onRemoveFromWaitlist={(id) => {}}
+                 />;
+            case 'Settings':
+                return <Settings 
+                    currentUser={currentUser} 
+                    onChangePassword={handleChangePassword}
+                    onUpdateProfile={handleUpdateProfile}
+                />;
+            default:
+                return <Dashboard 
+                            currentUser={currentUser} 
+                            bookings={bookings} 
+                            classrooms={classrooms} 
+                            waitlist={waitlist} 
+                            users={users} 
+                            onQuickBook={handleOpenBookingModal}
+                            onApproveBooking={handleApproveBooking}
+                            onDeclineBooking={handleDeclineBooking}
+                        />;
+        }
+    };
+    
+    return (
+        <div className="flex h-screen bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-gray-100">
+            <Sidebar 
+                userRole={currentUser.role}
+                activeView={activeView}
+                setActiveView={setActiveView}
+                isCollapsed={isSidebarCollapsed}
+            />
+            <div className="flex flex-col flex-1 w-full overflow-hidden">
+                <Header 
+                    user={currentUser} 
+                    onLogout={handleLogout}
+                    onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+                    notifications={notifications}
+                    unreadCount={unreadNotifications.length}
+                    onMarkNotificationsAsRead={() => {}}
+                />
+                <main className="flex-1 overflow-x-hidden overflow-y-auto pb-16 md:pb-0">
+                    {renderActiveView()}
+                </main>
+                <BottomNavBar 
+                    userRole={currentUser.role}
+                    activeView={activeView}
+                    setActiveView={setActiveView}
+                />
+            </div>
+            {isBookingModalOpen && (
+                <BookingModal 
+                    isOpen={isBookingModalOpen}
+                    onClose={() => {
+                        setIsBookingModalOpen(false);
+                        setBookingToEdit(null);
+                        setInitialSlot(undefined);
+                    }}
+                    onSave={handleSaveBooking}
+                    classrooms={classrooms}
+                    currentUser={currentUser}
+                    bookingToEdit={bookingToEdit}
+                    initialSlot={initialSlot}
+                    isOverriding={isOverriding}
+                />
+            )}
+            <NotificationCenter notifications={toastNotifications} />
+        </div>
+    );
+};
+
+export default App;

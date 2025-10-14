@@ -1,0 +1,5 @@
+{
+  "name": "Copy of SmartClass Booking System",
+  "description": "A responsive web application for booking and managing smart classrooms in a college. It supports different user roles (Admin, HOD, Faculty) with role-based access control, a calendar view for bookings, and room management features.",
+  "requestFramePermissions": []
+}

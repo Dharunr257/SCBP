@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartClass Booking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#004AAD',
+                dark: '#3B82F6',
+              },
+              secondary: {
+                DEFAULT: '#00C49A',
+                dark: '#10B981',
+              },
+              available: 'rgb(34 197 94)', // green-500
+              booked: 'rgb(239 68 68)', // red-500
+              blocked: 'rgb(107 114 128)', // gray-500
+              waitlist: 'rgb(249 115 22)', // orange-500
+              'dark-bg': '#111827',
+              'dark-card': '#1F2937',
+              'dark-border': '#374151'
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "axios": "https://aistudiocdn.com/axios@^1.7.2",
+    "bcryptjs": "https://aistudiocdn.com/bcryptjs@^3.0.2",
+    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.3",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "cors": "https://aistudiocdn.com/cors@^2.8.5",
+    "url": "https://aistudiocdn.com/url@^0.11.4",
+    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "mongoose": "https://aistudiocdn.com/mongoose@^8.19.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

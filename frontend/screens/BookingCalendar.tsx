@@ -1,0 +1,388 @@
+
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
+import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon, TrashIcon, InfoIcon } from '../components/Icons';
+import DatePicker from '../components/DatePicker';
+
+interface BookingCalendarProps {
+  currentUser: User;
+  bookings: Booking[];
+  classrooms: Classroom[];
+  waitlist: WaitlistEntry[];
+  users: User[];
+  roomBlocks: RoomBlock[];
+  onBookSlot: (slot: { date: string; startTime: string; classroomId: string }) => void;
+  onJoinWaitlist: (slot: { date: string; startTime: string; endTime: string; classroomId: string }) => void;
+  onEditBooking: (booking: Booking) => void;
+  onDeleteBooking: (bookingId: string) => void;
+  onOverrideBooking: (booking: Booking) => void;
+  onViewDetails: (booking: Booking) => void;
+}
+
+type CalendarView = 'Daily' | 'Monthly';
+
+const getMonthCalendarDays = (date: Date): Date[] => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDayOfMonth);
+    startDate.setDate(startDate.getDate() - firstDayOfMonth.getDay());
+    const endDate = new Date(lastDayOfMonth);
+    if (lastDayOfMonth.getDay() !== 6) {
+        endDate.setDate(endDate.getDate() + (6 - lastDayOfMonth.getDay()));
+    }
+    const days = [];
+    let currentDate = startDate;
+    while (currentDate <= endDate) {
+        days.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return days;
+};
+
+const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, waitlist, users, roomBlocks, onBookSlot, onJoinWaitlist, onEditBooking, onDeleteBooking, onOverrideBooking, onViewDetails }) => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [view, setView] = useState<CalendarView>('Daily');
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+
+    const activeBookings = useMemo(() => bookings.filter(b => b.status !== 'declined'), [bookings]);
+
+    useEffect(() => {
+        const availableClassrooms = classrooms.filter(c => c.status === 'available');
+        if (selectedClassroomId === null && availableClassrooms.length > 0) {
+            setSelectedClassroomId(availableClassrooms[0]._id);
+        } else if (availableClassrooms.length === 0 && classrooms.length > 0) {
+            setSelectedClassroomId(classrooms[0]._id);
+        }
+    }, [classrooms, selectedClassroomId]);
+
+
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
+
+    const maxDate = useMemo(() => {
+        const d = new Date(today);
+        d.setMonth(d.getMonth() + 2);
+        return d;
+    }, [today]);
+
+    const bookingsBySlot = useMemo(() => {
+        const map = new Map<string, Booking>();
+        activeBookings.forEach(b => {
+            const key = `${b.date}-${b.startTime}-${b.classroomId}`;
+            map.set(key, b);
+        });
+        return map;
+    }, [activeBookings]);
+    
+    const bookingsByDate = useMemo(() => {
+        const map = new Map<string, Booking[]>();
+        activeBookings.forEach(b => {
+            const dateKey = b.date;
+            if (!map.has(dateKey)) {
+                map.set(dateKey, []);
+            }
+            map.get(dateKey)!.push(b);
+        });
+        map.forEach(dayBookings => {
+            dayBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        });
+        return map;
+    }, [activeBookings]);
+
+    const userWaitlistBySlot = useMemo(() => {
+        const set = new Set<string>();
+        waitlist
+            .filter(w => w.userId === currentUser._id)
+            .forEach(w => {
+                const key = `${w.date}-${w.startTime}-${w.classroomId}`;
+                set.add(key);
+            });
+        return set;
+    }, [waitlist, currentUser._id]);
+    
+    const handleDateChange = (increment: number) => {
+        const newDate = new Date(currentDate);
+        if (view === 'Monthly') {
+            newDate.setMonth(currentDate.getMonth() + increment, 1);
+        } else { // Daily
+            newDate.setDate(currentDate.getDate() + increment);
+        }
+
+        if (newDate < minDate) {
+            setCurrentDate(today);
+        } else if (newDate > maxDate) {
+            // Do nothing, or snap to maxDate
+        } else {
+            setCurrentDate(newDate);
+        }
+    };
+    
+    const handleDateSelect = (selectedDate: Date) => {
+        if (selectedDate >= today && selectedDate <= maxDate) {
+            setCurrentDate(selectedDate);
+        }
+        setIsDatePickerOpen(false);
+    };
+    
+    const minDate = today;
+
+    const isPrevDisabled = useMemo(() => {
+        if (view === 'Daily') return currentDate <= today;
+        const prevMonth = new Date(currentDate);
+        prevMonth.setMonth(prevMonth.getMonth() - 1, 1);
+        const minMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        return prevMonth < minMonth;
+    }, [currentDate, today, minDate, view]);
+
+    const isNextDisabled = useMemo(() => {
+        if (view === 'Daily') {
+            const nextDay = new Date(currentDate);
+            nextDay.setDate(currentDate.getDate() + 1);
+            return nextDay > maxDate;
+        }
+        const nextMonth = new Date(currentDate);
+        nextMonth.setMonth(nextMonth.getMonth() + 1, 1);
+        const maxMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+        return nextMonth > maxMonth;
+    }, [currentDate, maxDate, view]);
+    
+    const calendarDays = useMemo(() => {
+        if (view === 'Monthly') return getMonthCalendarDays(currentDate);
+        return [currentDate];
+    }, [currentDate, view]);
+
+    const handleDayClick = (day: Date) => {
+        setCurrentDate(day);
+        setView('Daily');
+    };
+
+    const renderSlot = (date: Date, time: string, classroom: Classroom) => {
+        const dateStr = formatDate(date);
+
+        if (classroom.status === 'maintenance') {
+            return (
+                <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600">
+                    Maintenance
+                </div>
+            );
+        }
+
+        const period = PERIODS.find(p => p.startTime === time);
+        if (period) {
+            const block = roomBlocks.find(b => b.classroomId === classroom._id && b.date === dateStr && b.periods.includes(period.period));
+            if (block) {
+                const blockedByUser = users.find(u => u._id === block.userId);
+                return (
+                    <div className="bg-blocked/80 dark:bg-blocked/50 h-full rounded-md flex flex-col items-center justify-center text-white p-1 text-center">
+                        <p className="text-xs font-bold truncate">{block.reason}</p>
+                        <p className="text-[10px] opacity-80">Blocked by {blockedByUser?.name.split(' ')[0]}</p>
+                    </div>
+                );
+            }
+        }
+        
+        const slotKey = `${dateStr}-${time}-${classroom._id}`;
+        const booking = bookingsBySlot.get(slotKey);
+
+        if (booking) {
+            const user = users.find(u => u._id === booking.userId);
+            const isOwnBooking = currentUser._id === booking.userId;
+            const isPending = booking.status === 'pending';
+            const bookingColor = isPending ? 'bg-waitlist' : isOwnBooking ? 'bg-secondary' : 'bg-booked';
+            
+            return (
+                <button onClick={() => onViewDetails(booking)} className={`${bookingColor} text-black p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
+                    <div className="flex-grow">
+                        <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
+                        <p className="text-black/70 text-[11px] truncate">{user?.department}</p>
+                        <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
+                    </div>
+                     {isPending && <p className="text-[10px] font-bold text-black/80 self-start">PENDING</p>}
+                     <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1 rounded-md text-center">
+                        <span className="text-white font-bold text-sm flex items-center"><InfoIcon className="w-4 h-4 mr-1"/> View</span>
+                    </div>
+                </button>
+            )
+        }
+        
+        if (currentUser.role === UserRole.Faculty) {
+             return <div className="bg-available/10 w-full h-full rounded-md"></div>;
+        }
+
+        return (
+            <button 
+                onClick={() => onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id })}
+                className="bg-available/10 hover:bg-available/30 w-full h-full rounded-md flex items-center justify-center group transition-colors"
+                aria-label={`Book slot for ${classroom.name} at ${time} on ${dateStr}`}
+            >
+                <PlusIcon className="h-5 w-5 text-green-700 opacity-0 group-hover:opacity-100" />
+            </button>
+        );
+    }
+
+    const renderHeader = () => {
+        if (view === 'Monthly') {
+            return currentDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+        }
+        return calendarDays[0].toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    
+    const mobileDailyViewClassroom = classrooms.find(c => c._id === selectedClassroomId);
+
+    return (
+        <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
+            <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Classroom Bookings</h2>
+                <div className="flex items-center space-x-2 md:space-x-4">
+                    <button onClick={() => handleDateChange(-1)} 
+                        disabled={isPrevDisabled}
+                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Previous period"
+                    >
+                        <ChevronLeftIcon className="h-6 w-6 text-gray-600 dark:text-gray-300"/>
+                    </button>
+                    <div className="relative">
+                       <button
+                            onClick={() => setIsDatePickerOpen(true)}
+                            className="font-semibold text-lg text-center text-gray-700 dark:text-gray-200 min-w-[240px] md:min-w-0 px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            aria-label="Select date"
+                        >
+                            {renderHeader()}
+                        </button>
+                        {isDatePickerOpen && (
+                            <DatePicker
+                                selectedDate={currentDate}
+                                onChange={handleDateSelect}
+                                minDate={today}
+                                maxDate={maxDate}
+                                onClose={() => setIsDatePickerOpen(false)}
+                            />
+                        )}
+                    </div>
+                    <button onClick={() => handleDateChange(1)} 
+                        disabled={isNextDisabled}
+                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Next period"
+                    >
+                        <ChevronRightIcon className="h-6 w-6 text-gray-600 dark:text-gray-300"/>
+                    </button>
+                </div>
+                 <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md self-center">
+                    <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
+                    <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+                </div>
+            </div>
+            {view === 'Daily' && (
+                <div className="md:hidden mb-4">
+                    <label htmlFor="classroom-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Classroom</label>
+                    <select
+                        id="classroom-select"
+                        value={selectedClassroomId ?? ''}
+                        onChange={e => setSelectedClassroomId(e.target.value)}
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-dark-card text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary"
+                    >
+                        {classrooms.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                    </select>
+                </div>
+            )}
+            <div className="flex-grow overflow-auto">
+            {view === 'Monthly' ? (
+                <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-dark-border h-full">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-center font-bold p-2 border-b-2 border-primary dark:border-primary-dark sticky top-0 bg-gray-100 dark:bg-dark-bg z-10 text-gray-700 dark:text-gray-300 text-sm">
+                            {day}
+                        </div>
+                    ))}
+                    {calendarDays.map((day) => {
+                        const dateKey = formatDate(day);
+                        const dayBookings = bookingsByDate.get(dateKey) || [];
+                        const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                        const isToday = formatDate(day) === formatDate(new Date());
+                        return (
+                            <button key={dateKey} onClick={() => handleDayClick(day)} className={`relative min-h-[120px] p-1 border-r border-b border-gray-200 dark:border-dark-border group flex flex-col text-left ${isCurrentMonth ? 'bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                <div className={`flex items-center justify-center w-7 h-7 text-sm font-semibold rounded-full self-start ${isToday ? 'bg-primary text-white' : isCurrentMonth ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                                    {day.getDate()}
+                                </div>
+                                <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px] flex-grow">
+                                    {dayBookings.slice(0, 3).map(booking => {
+                                        const isOwnBooking = booking.userId === currentUser._id;
+                                        const isPending = booking.status === 'pending';
+                                        const bgColor = isPending ? 'bg-waitlist/80' : isOwnBooking ? 'bg-secondary/80' : 'bg-booked/80';
+                                        return (
+                                            <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>
+                                                <div className="flex items-center">
+                                                    <span className="font-semibold truncate">{booking.subject}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {dayBookings.length > 3 && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center font-semibold pt-1">
+                                            + {dayBookings.length - 3} more
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : (
+                <>
+                    {/* Desktop Daily View */}
+                    <div className="hidden md:grid grid-cols-[auto_1fr]">
+                        <div>
+                            {TIME_SLOTS.map(time => (
+                                <div key={time} className="h-28 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2">{formatTime12h(time)}</div>
+                            ))}
+                        </div>
+                        <div className="overflow-x-auto">
+                            <div className="grid" style={{ gridTemplateColumns: `repeat(${classrooms.length}, minmax(140px, 1fr))` }}>
+                                {classrooms.map(cr => (
+                                    <div key={cr._id} className="text-center font-semibold text-sm p-2 h-12 flex items-center justify-center border-b border-r border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card text-gray-700 dark:text-gray-200 sticky top-0 z-10">
+                                        {cr.name}
+                                    </div>
+                                ))}
+                                {TIME_SLOTS.map(time => (
+                                    <React.Fragment key={time}>
+                                        {classrooms.map(classroom => (
+                                            <div key={`${classroom._id}-${time}`} className="h-28 p-1 border-r border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
+                                                {renderSlot(calendarDays[0], time, classroom)}
+                                            </div>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {/* Mobile Daily View */}
+                    <div className="md:hidden">
+                    {mobileDailyViewClassroom && TIME_SLOTS.map(time => (
+                        <div key={time} className="flex items-stretch border-b border-gray-200 dark:border-dark-border min-h-[80px]">
+                            <div className="w-24 flex-shrink-0 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
+                                {formatTime12h(time)}
+                            </div>
+                            <div className="flex-grow p-1">
+                                {renderSlot(calendarDays[0], time, mobileDailyViewClassroom)}
+                            </div>
+                        </div>
+                    ))}
+                    {!mobileDailyViewClassroom && <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
+                    </div>
+                </>
+            )}
+            </div>
+        </div>
+    )
+}
+
+export default BookingCalendar;

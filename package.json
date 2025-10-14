@@ -1,0 +1,14 @@
+{
+  "name": "smartclass-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "build": "npm install --prefix backend && npm install --prefix frontend --include=dev && npm --prefix frontend run build",
+    "start": "npm start --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

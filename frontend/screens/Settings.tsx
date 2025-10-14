@@ -1,0 +1,138 @@
+import React, { useState, useEffect } from 'react';
+import { User } from '../types';
+
+interface SettingsProps {
+    currentUser: User;
+    onChangePassword: (current: string, newPass: string) => Promise<{ success: boolean, message: string }>;
+    onUpdateProfile: (userData: { name: string, email: string }) => Promise<{ success: boolean, message: string }>;
+}
+
+const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUpdateProfile }) => {
+    // Password State
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [passwordSuccess, setPasswordSuccess] = useState('');
+
+    // Profile State
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [profileError, setProfileError] = useState('');
+    const [profileSuccess, setProfileSuccess] = useState('');
+    
+    useEffect(() => {
+        if(currentUser) {
+            setName(currentUser.name);
+            setEmail(currentUser.email);
+        }
+    }, [currentUser]);
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordError('');
+        setPasswordSuccess('');
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('New passwords do not match.');
+            return;
+        }
+
+        const result = await onChangePassword(currentPassword, newPassword);
+
+        if (result.success) {
+            setPasswordSuccess(result.message);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } else {
+            setPasswordError(result.message);
+        }
+    };
+    
+    const handleProfileSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProfileError('');
+        setProfileSuccess('');
+
+        const result = await onUpdateProfile({ name, email });
+        
+        if (result.success) {
+            setProfileSuccess(result.message);
+        } else {
+            setProfileError(result.message);
+        }
+    };
+
+
+  return (
+    <div className="p-4 md:p-8 bg-gray-100 dark:bg-dark-bg min-h-full">
+      <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Settings</h2>
+      
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Profile Settings</h3>
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div>
+                  <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+                  <input id="profile-name" type="text" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                  <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+                  <input id="profile-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+               {profileError && <p className="text-red-500 text-sm">{profileError}</p>}
+               {profileSuccess && <p className="text-green-500 text-sm">{profileSuccess}</p>}
+              <div className="flex justify-end pt-2">
+                <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Update Profile</button>
+              </div>
+            </form>
+          </div>
+
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Change Password</h3>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                  <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                  <input id="current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                  <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                  <input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+              <div>
+                  <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                  <input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
+              </div>
+               {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+               {passwordSuccess && <p className="text-green-500 text-sm">{passwordSuccess}</p>}
+              <div className="flex justify-end pt-2">
+                <button type="submit" className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500">Update Password</button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+        
+        <div className="lg:col-span-1">
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6 sticky top-24">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Account Security</h3>
+             <p className="text-gray-600 dark:text-gray-400 text-sm">Regularly updating your password and ensuring your profile information is correct helps keep your account secure.</p>
+             <h4 className="font-semibold mt-4 mb-2 dark:text-gray-200">Password Policy</h4>
+            <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-2 text-sm">
+                <li>Minimum length: 8 characters</li>
+                <li>Must contain a special character (e.g., !@#$%)</li>
+                <li>Must contain a number (0-9)</li>
+                <li>Cannot be a previously used password</li>
+            </ul>
+             <p className="text-xs text-gray-500 mt-4">(Policy enforcement is for demonstration purposes)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;
