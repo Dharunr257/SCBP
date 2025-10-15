@@ -84,6 +84,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                 return {
                     'S.NO': index + 1,
                     'Staff Name': b.staffName,
+                    'Subject': b.subject,
                     'Department': user?.department || 'N/A',
                     'Contact No': b.contactNo,
                     'Booking On': b.createdAt.toLocaleString(),
@@ -187,6 +188,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['S.NO']}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Staff Name']}</td>
+                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Subject']}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Department']}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Contact No']}</td>
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Booking On']}</td>
@@ -197,7 +199,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-8 text-gray-500 dark:text-gray-400">No completed booking records found for the last 2 months.</td>
+                                    <td colSpan={10} className="text-center py-8 text-gray-500 dark:text-gray-400">No completed booking records found for the last 2 months.</td>
                                 </tr>
                             )}
                         </tbody>

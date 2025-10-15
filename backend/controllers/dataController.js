@@ -20,7 +20,7 @@ export const getAllData = async (req, res) => {
 
         await Booking.updateMany(
             {
-                status: 'confirmed',
+                status: { $in: ['confirmed', 'overridden'] },
                 $or: [
                     { date: { $lt: todayStr } },
                     { date: todayStr, endTime: { $lt: currentTimeStr } }

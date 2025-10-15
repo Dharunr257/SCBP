@@ -51,6 +51,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
                     _id: b._id,
                     'S.NO': index + 1,
                     'Staff Name': b.staffName,
+                    'Subject': b.subject,
                     'Department': user?.department || 'N/A',
                     'Booking On': new Date(b.createdAt).toLocaleDateString(),
                     'Class On': classDate.toLocaleDateString(),
@@ -67,6 +68,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
                         <tr>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">S.No</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Staff Name</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Department</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Booked On</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class Date</th>
@@ -78,6 +80,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
                             <tr key={record._id}>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['S.NO']}</td>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Staff Name']}</td>
+                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Subject']}</td>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Department']}</td>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Booking On']}</td>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Class On']}</td>
@@ -85,7 +88,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">No recent booking records found.</td>
+                                <td colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">No recent booking records found.</td>
                             </tr>
                         )}
                     </tbody>
