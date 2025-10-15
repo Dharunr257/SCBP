@@ -1,4 +1,5 @@
 
+
 import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notification, Setting } from '../models.js';
 
 // @desc    Fetch all application data
@@ -6,6 +7,28 @@ import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notific
 // @access  Private
 export const getAllData = async (req, res) => {
     try {
+        // Automatically mark past confirmed bookings as 'completed'
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        
+        const todayStr = `${year}-${month}-${day}`;
+        const currentTimeStr = `${hours}:${minutes}`;
+
+        await Booking.updateMany(
+            {
+                status: 'confirmed',
+                $or: [
+                    { date: { $lt: todayStr } },
+                    { date: todayStr, endTime: { $lt: currentTimeStr } }
+                ]
+            },
+            { $set: { status: 'completed' } }
+        );
+
         const [users, classrooms, bookings, waitlist, roomBlocks, historyLogs, notifications, settings] = await Promise.all([
             User.find({}).select('-password'),
             Classroom.find({}).sort({ name: 1 }),

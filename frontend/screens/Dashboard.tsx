@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useState } from 'react';
 import { Booking, User, Classroom, UserRole, WaitlistEntry } from '../types';
 import { formatTime12h } from '../constants';
@@ -39,7 +40,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
         }
 
         return records
-            .filter(b => new Date(b.createdAt) >= twoMonthsAgo && b.status === 'confirmed')
+            .filter(b => new Date(b.createdAt) >= twoMonthsAgo && b.status === 'completed')
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 5) // Show top 5 recent for dashboard
             .map((b, index) => {

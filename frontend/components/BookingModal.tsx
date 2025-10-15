@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Booking, Classroom, User, UserRole } from '../types';
 import { CloseIcon, TrashIcon } from './Icons';
@@ -35,6 +36,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
   const [contactNo, setContactNo] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [availablePeriods, setAvailablePeriods] = useState(PERIODS);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const maxDate = new Date();
@@ -52,6 +54,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
     if (!bookingToEdit) return false;
     return canEditBooking(currentUser, bookingToEdit, users);
   }, [currentUser, bookingToEdit, users, mode]);
+  
+  useEffect(() => {
+    if (mode === 'create') {
+        const isToday = date === new Date().toISOString().split('T')[0];
+        if (isToday) {
+            const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const futurePeriods = PERIODS.filter(p => p.startTime > currentTime);
+            setAvailablePeriods(futurePeriods);
+            setSelectedPeriods(prev => prev.filter(p => futurePeriods.some(fp => fp.period === p)));
+        } else {
+            setAvailablePeriods(PERIODS);
+        }
+    } else {
+        setAvailablePeriods(PERIODS);
+    }
+  }, [date, mode, isOpen]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -198,7 +217,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
                 </select>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 border dark:border-gray-600 rounded-lg">
-                    {PERIODS.map(p => (
+                    {availablePeriods.map(p => (
                         <label key={p.period} className={`flex items-center space-x-2 p-2 rounded-md transition-colors cursor-pointer ${selectedPeriods.includes(p.period) ? 'bg-primary/20 dark:bg-primary-dark/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                             <input
                                 type="checkbox"
@@ -211,6 +230,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
                             </span>
                         </label>
                     ))}
+                    {availablePeriods.length === 0 && date === todayStr && (
+                        <p className="col-span-full text-center text-sm text-gray-500 dark:text-gray-400 py-4">No available time slots left for today.</p>
+                    )}
                 </div>
             )}
              {(mode === 'edit' || mode === 'override') && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Multi-period editing/overriding is not supported. Please create a new booking for multiple slots.</p>}

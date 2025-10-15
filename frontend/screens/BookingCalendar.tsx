@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
@@ -181,11 +182,23 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             );
         }
         
-        const confirmedBooking = bookings.find(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period.period && (b.status === 'confirmed' || b.status === 'overridden'));
-        const pendingBookings = bookings.filter(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period.period && b.status === 'pending');
+        const bookingsForSlot = bookings.filter(b => b.classroomId === classroom._id && b.date === dateStr && b.period === period.period);
+        const completedBooking = bookingsForSlot.find(b => b.status === 'completed');
+        if(completedBooking) {
+            const user = users.find(u => u._id === completedBooking.userId);
+            return (
+                <div className="bg-gray-400 dark:bg-gray-600 text-white p-2 rounded-md text-xs h-full flex flex-col justify-between w-full text-left opacity-70">
+                    <p className="font-bold truncate leading-tight">{completedBooking.subject} ({completedBooking.classYear})</p>
+                    <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
+                    <p className="truncate text-[11px] mt-1">{completedBooking.staffName}</p>
+                    <p className="text-white/80 text-[10px] font-semibold mt-1">Completed</p>
+                </div>
+            );
+        }
 
+        const confirmedBooking = bookingsForSlot.find(b => b.status === 'confirmed' || b.status === 'overridden');
+        const pendingBookings = bookingsForSlot.filter(b => b.status === 'pending');
         const userHasPendingRequest = pendingBookings.some(b => b.userId === currentUser._id);
-
         const bookingToConsider = confirmedBooking || pendingBookings[0];
 
         // Renders the main booking/pending info card
@@ -226,12 +239,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         // If there's any booking or pending request
         if (bookingToConsider) {
             const isOwnerOrRequester = currentUser._id === bookingToConsider.userId;
-
             if (isOwnerOrRequester || userHasPendingRequest) {
                 return <BookingInfoCard booking={bookingToConsider} />;
             }
            
-            // Other user looking at a booked/pending slot
             const canOverride = canOverrideBooking(currentUser, bookingToConsider, users);
             return (
                 <div className="h-full rounded-md flex flex-col text-center justify-between p-1 relative">
@@ -248,7 +259,13 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             );
         }
 
-        // Slot is available
+        // Slot is available or past
+        const isToday = dateStr === formatDate(new Date());
+        const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        if (isToday && period.endTime < currentTime) {
+            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm">Past</div>;
+        }
+
         if (currentUser.role === UserRole.Faculty) {
             return <div className="bg-available/10 w-full h-full rounded-md"></div>;
         }

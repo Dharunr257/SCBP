@@ -31,9 +31,14 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
         return bookings;
     }, [bookings, users, currentUser]);
 
+    const completedAndOverriddenBookings = useMemo(() => {
+        return filteredBookings.filter(b => ['completed', 'overridden'].includes(b.status));
+    }, [filteredBookings]);
+
+
     const departmentUsage = useMemo(() => {
         const usage: { [key: string]: number } = {};
-        filteredBookings.forEach(b => {
+        completedAndOverriddenBookings.forEach(b => {
             const user = users.find(u => u._id === b.userId);
             if(user) {
                 const duration = (new Date(`1970-01-01T${b.endTime}:00Z`).getTime() - new Date(`1970-01-01T${b.startTime}:00Z`).getTime()) / 3600000;
@@ -41,22 +46,22 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
             }
         });
         return Object.entries(usage).sort(([,a],[,b]) => b - a);
-    }, [filteredBookings, users]);
+    }, [completedAndOverriddenBookings, users]);
 
     const topUsers = useMemo(() => {
         const userCounts: { [key: string]: number } = {};
-        filteredBookings.forEach(b => {
+        completedAndOverriddenBookings.forEach(b => {
             const user = users.find(u => u._id === b.userId);
             if (user) {
                 userCounts[user.name] = (userCounts[user.name] || 0) + 1;
             }
         });
         return Object.entries(userCounts).sort(([,a],[,b]) => b - a).slice(0, 5);
-    }, [filteredBookings, users]);
+    }, [completedAndOverriddenBookings, users]);
 
     const roomUtilization = useMemo(() => {
         const roomHours: { [key: string]: number } = {};
-        filteredBookings.forEach(b => {
+        completedAndOverriddenBookings.forEach(b => {
             const room = classrooms.find(r => r._id === b.classroomId);
             if (room) {
                  const duration = (new Date(`1970-01-01T${b.endTime}:00Z`).getTime() - new Date(`1970-01-01T${b.startTime}:00Z`).getTime()) / 3600000;
@@ -65,14 +70,14 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
         });
         const totalHours = 10 * 20; // 10 hours a day, 20 days a month approx
         return Object.entries(roomHours).map(([name, hours]) => ({ name, utilization: (hours / totalHours) * 100 })).sort((a,b) => b.utilization - a.utilization);
-    }, [filteredBookings, classrooms]);
+    }, [completedAndOverriddenBookings, classrooms]);
 
     const bookingRecords = useMemo(() => {
         const twoMonthsAgo = new Date();
         twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
         return filteredBookings
-            .filter(b => new Date(b.createdAt) >= twoMonthsAgo)
+            .filter(b => b.status === 'completed' && new Date(b.createdAt) >= twoMonthsAgo)
             .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
             .map((b, index) => {
                 const user = users.find(u => u._id === b.userId);
@@ -192,7 +197,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-8 text-gray-500 dark:text-gray-400">No booking records found for the last 2 months.</td>
+                                    <td colSpan={9} className="text-center py-8 text-gray-500 dark:text-gray-400">No completed booking records found for the last 2 months.</td>
                                 </tr>
                             )}
                         </tbody>

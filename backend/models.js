@@ -1,9 +1,10 @@
 
+
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const UserRole = ["Principal", "Dean", "HOD", "Faculty"];
-const BookingStatus = ['confirmed', 'cancelled', 'overridden', 'pending', 'declined'];
+const BookingStatus = ['confirmed', 'cancelled', 'overridden', 'pending', 'declined', 'completed'];
 const LogAction = [
     "Created", "Edited", "Deleted", "Overridden", 
     "Booking Approved", "Booking Declined",

@@ -1,4 +1,5 @@
 
+
 export enum UserRole {
   Principal = "Principal",
   Dean = "Dean",
@@ -38,7 +39,7 @@ export interface Booking {
   endTime: string; // HH:MM (24h)
   subject: string;
   classYear: string;
-  status: 'confirmed' | 'cancelled' | 'overridden' | 'pending' | 'declined';
+  status: 'confirmed' | 'cancelled' | 'overridden' | 'pending' | 'declined' | 'completed';
   staffName: string;
   contactNo: string;
   period: number;
