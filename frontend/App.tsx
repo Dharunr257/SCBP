@@ -131,7 +131,7 @@ const App: React.FC = () => {
                 if (!isModalOpenRef.current) {
                     fetchAllData();
                 }
-            }, 10000); // Poll every 10 seconds
+            }, 7500); // Poll every 10 seconds
 
             return () => clearInterval(intervalId);
         }
