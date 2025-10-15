@@ -14,7 +14,6 @@ const navItems = {
   [UserRole.Principal]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -25,7 +24,6 @@ const navItems = {
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Approval Requests', icon: BellIcon, condition: (user: User) => !!user.isIqacDean },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Room Management', icon: RoomIcon },
     { name: 'User Management', icon: UserGroupIcon },
     { name: 'Reports', icon: ReportsIcon },
@@ -35,7 +33,6 @@ const navItems = {
   [UserRole.HOD]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Reports', icon: ReportsIcon },
     { name: 'History Logs', icon: HistoryIcon },
     { name: 'Settings', icon: SettingsIcon },
@@ -43,7 +40,6 @@ const navItems = {
   [UserRole.Faculty]: [
     { name: 'Dashboard', icon: DashboardIcon },
     { name: 'Bookings', icon: CalendarIcon },
-    { name: 'My Waitlist', icon: ClipboardListIcon },
     { name: 'Settings', icon: SettingsIcon },
   ],
 };

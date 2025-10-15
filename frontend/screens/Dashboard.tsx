@@ -44,13 +44,15 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
             .slice(0, 5) // Show top 5 recent for dashboard
             .map((b, index) => {
                 const user = users.find(u => u._id === b.userId);
+                const [y, m, d] = b.date.split('-').map(Number);
+                const classDate = new Date(y, m - 1, d);
                 return {
                     _id: b._id,
                     'S.NO': index + 1,
                     'Staff Name': b.staffName,
                     'Department': user?.department || 'N/A',
                     'Booking On': new Date(b.createdAt).toLocaleDateString(),
-                    'Class On': new Date(b.date).toLocaleDateString(),
+                    'Class On': classDate.toLocaleDateString(),
                     'Period': b.period,
                 };
             });
@@ -118,12 +120,14 @@ const ApprovalDashboard: React.FC<{
                 {pendingBookings.length > 0 ? pendingBookings.map(b => {
                     const user = users.find(u => u._id === b.userId);
                     const isLoading = loadingAction?.id === b._id;
+                    const [y, m, d] = b.date.split('-').map(Number);
+                    const classDate = new Date(y, m - 1, d);
                     return (
                         <div key={b._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                             <div>
                                 <p className="font-semibold text-gray-800 dark:text-gray-200">{b.subject} ({b.classYear})</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Requested by {user?.name} ({user?.department}) for {new Date(b.date).toLocaleDateString()}
+                                    Requested by {user?.name} ({user?.department}) for {classDate.toLocaleDateString()}
                                 </p>
                             </div>
                             <div className="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
@@ -148,7 +152,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  const userBookings = bookings.filter(b => b.userId === currentUser._id && new Date(b.date) >= today && ['confirmed', 'pending'].includes(b.status));
+  const userBookings = bookings.filter(b => {
+    const [y,m,d] = b.date.split('-').map(Number);
+    const bookingDate = new Date(y, m - 1, d);
+    return b.userId === currentUser._id && bookingDate >= today && ['confirmed', 'pending'].includes(b.status);
+  });
   userBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const totalBookings = bookings.filter(b => b.status === 'confirmed').length;
@@ -191,11 +199,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
                             {userBookings.length > 0 ? userBookings.slice(0, 5).map(b => {
                                 const room = classrooms.find(c => c._id === b.classroomId);
                                 const isPending = b.status === 'pending';
+                                const [y, m, d] = b.date.split('-').map(Number);
+                                const classDate = new Date(y, m - 1, d);
                                 return (
                                     <div key={b._id} className={`p-3 rounded-md flex justify-between items-center ${isPending ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-gray-50 dark:bg-gray-700'}`}>
                                         <div>
                                             <p className={`font-semibold ${isPending ? 'text-yellow-800 dark:text-yellow-200' : 'text-gray-800 dark:text-gray-200'}`}>{b.subject} ({b.classYear})</p>
-                                            <p className={`text-sm ${isPending ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400'}`}>{room?.name} on {new Date(b.date).toLocaleDateString()}</p>
+                                            <p className={`text-sm ${isPending ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400'}`}>{room?.name} on {classDate.toLocaleDateString()}</p>
                                         </div>
                                         <div className='flex items-center space-x-2'>
                                             {isPending && <span className="font-bold text-xs text-yellow-800 dark:text-yellow-200 uppercase">Pending</span>}

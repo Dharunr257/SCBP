@@ -471,14 +471,12 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     bookings={bookings}
                     classrooms={classrooms}
-                    waitlist={waitlist}
                     users={users}
                     roomBlocks={roomBlocks}
                     onBookSlot={handleOpenBookingModal}
                     onEditBooking={handleEditBooking}
                     onDeleteBooking={handleDeleteBooking}
                     onOverrideBooking={handleOverrideBooking}
-                    onJoinWaitlist={handleOpenWaitlistModal}
                 />;
              case 'Approval Requests':
                 return <ApprovalRequests
