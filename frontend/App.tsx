@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { axiosInstance } from './utils/axios';
 
 // Import types
@@ -60,6 +58,13 @@ const App: React.FC = () => {
     const [bookingModalMode, setBookingModalMode] = useState<BookingModalMode>('create');
     const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
     const [slotToWaitlist, setSlotToWaitlist] = useState<{ date: string; period: number; classroomId: string } | null>(null);
+
+    // Ref to track if a modal is open to pause polling
+    const isModalOpenRef = useRef(false);
+
+    useEffect(() => {
+        isModalOpenRef.current = isBookingModalOpen || isWaitlistModalOpen;
+    }, [isBookingModalOpen, isWaitlistModalOpen]);
 
     const isApprovalEnabled = useMemo(() => settings.find(s => s.key === 'deanApprovalRequired')?.value === 'true', [settings]);
     
@@ -123,7 +128,9 @@ const App: React.FC = () => {
     useEffect(() => {
         if (currentUser) {
             const intervalId = setInterval(() => {
-                fetchAllData();
+                if (!isModalOpenRef.current) {
+                    fetchAllData();
+                }
             }, 10000); // Poll every 10 seconds
 
             return () => clearInterval(intervalId);
