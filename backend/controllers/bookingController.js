@@ -115,6 +115,29 @@ export const overrideBooking = async (req, res) => {
             type: 'error'
         });
         
+        // Decline any other pending requests for this same slot.
+        const otherPendingRequests = await Booking.find({
+            classroomId: overriddenBooking.classroomId,
+            date: overriddenBooking.date,
+            period: overriddenBooking.period,
+            _id: { $ne: overriddenBooking._id }, // Exclude the booking that was just overridden.
+            status: 'pending'
+        });
+
+        if (otherPendingRequests.length > 0) {
+            const otherUserIds = otherPendingRequests.map(r => r.userId);
+            await Booking.updateMany({ _id: { $in: otherPendingRequests.map(r => r._id) } }, { status: 'declined' });
+            
+            // Notify other users that their request for the slot was declined due to override.
+            const notifications = otherUserIds.map(userId => ({
+                userId: userId,
+                message: `Your booking request for ${overriddenBooking.subject} on ${overriddenBooking.date} was declined as the slot was overridden by a higher authority.`,
+                type: 'info'
+            }));
+            await Notification.insertMany(notifications);
+            await createLog(req.user, 'Booking Declined', `Auto-declined ${otherPendingRequests.length} other pending request(s) due to an override on the same slot.`);
+        }
+
         await createLog(req.user, 'Overridden', `Overridden booking for subject ${bookingToOverride.subject} originally by ${originalOwner.name}`);
         
         res.status(200).json(overriddenBooking);

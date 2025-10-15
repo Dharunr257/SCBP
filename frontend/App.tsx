@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { axiosInstance } from './utils/axios';
 
@@ -111,10 +112,23 @@ const App: React.FC = () => {
             setSettings(data.settings);
         } catch (error: any) {
             console.error("Failed to fetch data:", error);
-            const message = error.response?.data?.message || 'Failed to load application data.';
-            showToast(message, 'error');
+            if (error.response?.status !== 401) { // 401 is handled by interceptor
+                const message = error.response?.data?.message || 'Failed to load application data.';
+                showToast(message, 'error');
+            }
         }
     }, [showToast]);
+
+    // Data polling for real-time updates
+    useEffect(() => {
+        if (currentUser) {
+            const intervalId = setInterval(() => {
+                fetchAllData();
+            }, 10000); // Poll every 10 seconds
+
+            return () => clearInterval(intervalId);
+        }
+    }, [currentUser, fetchAllData]);
 
     // Auth logic
     useEffect(() => {
