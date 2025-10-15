@@ -39,7 +39,12 @@ const getMonthCalendarDays = (date: Date): Date[] => {
     return days;
 };
 
-const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 const canOverrideBooking = (currentUser: User, booking: Booking, users: User[]): boolean => {
     const bookingOwner = users.find(u => u._id === booking.userId);
