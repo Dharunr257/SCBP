@@ -11,7 +11,6 @@ interface DashboardProps {
   waitlist: WaitlistEntry[];
   users: User[];
   onQuickBook: () => void;
-  // FIX: onApproveBooking and onDeclineBooking are async functions, so their types must be updated to return a Promise.
   onApproveBooking: (bookingId: string) => Promise<void>;
   onDeclineBooking: (bookingId: string) => Promise<void>;
   isApprovalEnabled: boolean;
