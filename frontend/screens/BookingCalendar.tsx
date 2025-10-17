@@ -66,6 +66,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
     const [view, setView] = useState<CalendarView>('Daily');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+    const [showActionsForBooking, setShowActionsForBooking] = useState<string | null>(null);
+
 
     useEffect(() => {
         const availableClassrooms = classrooms.filter(c => c.status === 'available');
@@ -166,14 +168,14 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         if (!period) return null;
 
         if (classroom.status === 'maintenance') {
-            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600">Maintenance</div>;
+            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm border border-dashed border-gray-300 dark:border-gray-600 min-h-[80px] md:min-h-0">Maintenance</div>;
         }
 
         const block = roomBlocks.find(b => b.classroomId === classroom._id && b.date === dateStr && b.periods.includes(period.period));
         if (block) {
             const blockedByUser = users.find(u => u._id === block.userId);
             return (
-                <div className="bg-blocked/80 dark:bg-blocked/50 h-full rounded-md flex flex-col items-center justify-center text-white p-1 text-center">
+                <div className="bg-blocked/80 dark:bg-blocked/50 h-full rounded-md flex flex-col items-center justify-center text-white p-1 text-center min-h-[80px] md:min-h-0">
                     <p className="text-xs font-bold truncate">{block.reason}</p>
                     <p className="text-[10px] opacity-80">Blocked by {blockedByUser?.name.split(' ')[0]}</p>
                 </div>
@@ -185,7 +187,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         if(completedBooking) {
             const user = users.find(u => u._id === completedBooking.userId);
             return (
-                <div className="bg-gray-400 dark:bg-gray-600 text-white p-2 rounded-md text-xs h-full flex flex-col justify-between w-full text-left opacity-70">
+                <div className="bg-gray-400 dark:bg-gray-600 text-white p-2 rounded-md text-xs h-full flex flex-col justify-between w-full text-left opacity-70 min-h-[80px] md:min-h-0">
                     <p className="font-bold truncate leading-tight">{completedBooking.subject} ({completedBooking.classYear})</p>
                     <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
                     <p className="truncate text-[11px] mt-1">{completedBooking.staffName}</p>
@@ -196,62 +198,41 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
         const confirmedBooking = bookingsForSlot.find(b => b.status === 'confirmed' || b.status === 'overridden');
         const pendingBookings = bookingsForSlot.filter(b => b.status === 'pending');
-        const userHasPendingRequest = pendingBookings.some(b => b.userId === currentUser._id);
         const bookingToConsider = confirmedBooking || pendingBookings[0];
 
-        // Renders the main booking/pending info card
-        const BookingInfoCard = ({ booking }: { booking: Booking }) => {
-            const user = users.find(u => u._id === booking.userId);
-            const isOwner = currentUser._id === booking.userId;
-            const canOverride = canOverrideBooking(currentUser, booking, users);
-            const isPending = booking.status === 'pending';
-            
+        if (bookingToConsider) {
+            const user = users.find(u => u._id === bookingToConsider.userId);
+            const isOwner = currentUser._id === bookingToConsider.userId;
+            const canOverride = canOverrideBooking(currentUser, bookingToConsider, users);
+            const isPending = bookingToConsider.status === 'pending';
+            const isActionsVisible = showActionsForBooking === bookingToConsider._id;
+
             let bookingColor = isPending ? 'bg-yellow-500' : 'bg-booked';
             if (isOwner) bookingColor = 'bg-secondary';
-            if (booking.status === 'overridden') bookingColor = 'bg-purple-500';
-
+            if (bookingToConsider.status === 'overridden') bookingColor = 'bg-purple-500';
+            
             return (
-                <div className={`${bookingColor} text-white p-2 rounded-md text-xs h-full flex flex-col justify-between group relative overflow-hidden w-full text-left`}>
-                    <div className="flex-grow">
-                        <p className="font-bold truncate leading-tight">{booking.subject} ({booking.classYear})</p>
-                        <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
-                        <p className="truncate text-[11px] mt-1">{booking.staffName}</p>
-                        {isPending ? <p className="text-white/80 text-[10px] font-semibold mt-1">Pending Request</p> : null}
-                        {booking.status === 'overridden' && <p className="text-white/80 text-[10px] font-semibold mt-1">Overridden</p>}
-                    </div>
-                    {(isOwner || canOverride) && !isPending && (
-                        <div className="absolute inset-0 bg-black bg-opacity-60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1 rounded-md text-center space-y-1">
-                            {isOwner && (
-                                <>
-                                <button onClick={() => onEditBooking(booking)} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold flex items-center justify-center"><EditIcon className="w-3 h-3 mr-1.5"/> Edit</button>
-                                <button onClick={() => onDeleteBooking(booking._id)} className="w-full text-center py-1.5 px-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold flex items-center justify-center"><TrashIcon className="w-3 h-3 mr-1.5"/> Delete</button>
-                                </>
-                            )}
-                            {canOverride && <button onClick={() => onOverrideBooking(booking)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
+                <div className="relative h-full" onClick={() => setShowActionsForBooking(prev => prev === bookingToConsider._id ? null : bookingToConsider._id)}>
+                    <div className={`${bookingColor} text-white p-2 rounded-md text-xs flex flex-col justify-between w-full text-left cursor-pointer min-h-[80px] md:h-full`}>
+                        <div className="flex-grow">
+                            <p className="font-bold truncate leading-tight">{bookingToConsider.subject} ({bookingToConsider.classYear})</p>
+                            <p className="text-white/70 text-[11px] truncate">{user?.department}</p>
+                            <p className="truncate text-[11px] mt-1">{bookingToConsider.staffName}</p>
+                            {isPending ? <p className="text-white/80 text-[10px] font-semibold mt-1">Pending Request ({pendingBookings.length})</p> : null}
+                            {bookingToConsider.status === 'overridden' && <p className="text-white/80 text-[10px] font-semibold mt-1">Overridden</p>}
                         </div>
-                    )}
-                </div>
-            )
-        };
-
-        // If there's any booking or pending request
-        if (bookingToConsider) {
-            const isOwnerOrRequester = currentUser._id === bookingToConsider.userId;
-            if (isOwnerOrRequester || userHasPendingRequest) {
-                return <BookingInfoCard booking={bookingToConsider} />;
-            }
-           
-            const canOverride = canOverrideBooking(currentUser, bookingToConsider, users);
-            return (
-                <div className="h-full rounded-md flex flex-col text-center justify-between p-1 relative">
-                    <div className="absolute inset-1">
-                        <BookingInfoCard booking={bookingToConsider} />
                     </div>
-                    <div className="relative z-10 w-full flex-grow flex flex-col justify-end items-center gap-1.5 p-1 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-md opacity-0 hover:opacity-100 transition-opacity">
-                        {canOverride && <button onClick={() => onOverrideBooking(bookingToConsider)} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
-                        {bookingToConsider.status === 'pending' && currentUser.role !== UserRole.Faculty && (
-                           <button onClick={() => onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id })} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold">Request Slot</button>
+                    
+                    <div className={`absolute inset-0 bg-black bg-opacity-70 transition-opacity flex flex-col items-center justify-center p-1 rounded-md text-center space-y-1 ${isActionsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {isOwner && !isPending && (
+                            <>
+                                <button onClick={(e) => { e.stopPropagation(); onEditBooking(bookingToConsider); }} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold flex items-center justify-center"><EditIcon className="w-3 h-3 mr-1.5"/> Edit</button>
+                                <button onClick={(e) => { e.stopPropagation(); onDeleteBooking(bookingToConsider._id); }} className="w-full text-center py-1.5 px-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-bold flex items-center justify-center"><TrashIcon className="w-3 h-3 mr-1.5"/> Delete</button>
+                            </>
                         )}
+                        {canOverride && !isPending && <button onClick={(e) => { e.stopPropagation(); onOverrideBooking(bookingToConsider); }} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
+                         {isPending && currentUser.role !== UserRole.Faculty && <button onClick={(e) => { e.stopPropagation(); onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id }); }} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold">Request Slot</button>}
+                         <button onClick={(e) => { e.stopPropagation(); setShowActionsForBooking(null); }} className="mt-2 text-white text-xs underline">Close</button>
                     </div>
                 </div>
             );
@@ -261,19 +242,20 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
         const isToday = dateStr === formatDate(new Date());
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         if (isToday && period.endTime < currentTime) {
-            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm">Past</div>;
+            return <div className="bg-gray-200 dark:bg-gray-700/50 h-full rounded-md flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold text-sm min-h-[80px] md:min-h-0">Past</div>;
         }
 
         if (currentUser.role === UserRole.Faculty) {
-            return <div className="bg-available/10 w-full h-full rounded-md"></div>;
+             return <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 h-full rounded-md flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm min-h-[80px] md:min-h-0">Unavailable</div>;
         }
         return (
             <button 
                 onClick={() => onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id })}
-                className="bg-available/10 hover:bg-available/30 w-full h-full rounded-md flex items-center justify-center group transition-colors"
+                className="border-2 border-dashed border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-400 w-full h-full rounded-md flex flex-col items-center justify-center group transition-colors min-h-[80px] md:h-28"
                 aria-label={`Book slot for ${classroom.name} at ${time} on ${dateStr}`}
             >
-                <PlusIcon className="h-5 w-5 text-green-700 opacity-0 group-hover:opacity-100" />
+                <PlusIcon className="h-6 w-6 text-green-600 mb-1" />
+                <span className="text-sm font-semibold text-green-700 dark:text-green-500">Book Slot</span>
             </button>
         );
     }
@@ -443,35 +425,31 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                             })}
                         </div>
                     </div>
-                    {/* Mobile Daily View */}
-                    <div className="md:hidden">
-                    {mobileDailyViewClassroom && ALL_DAY_SLOTS.map(slot => {
-                        if (slot.type === 'period') {
+                    {/* Mobile Daily View - Card Based */}
+                    <div className="md:hidden space-y-4 px-1">
+                        {mobileDailyViewClassroom ? ALL_DAY_SLOTS.map(slot => {
+                            if (slot.type === 'period') {
+                                return (
+                                    <div key={slot.startTime} className="bg-white dark:bg-dark-card rounded-lg shadow p-3">
+                                        <div className="flex justify-between items-center mb-2 pb-2 border-b dark:border-dark-border">
+                                            <h4 className="font-bold text-gray-800 dark:text-white">Period {slot.period}</h4>
+                                            <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
+                                                {formatTime12h(slot.startTime)} - {formatTime12h(slot.endTime)}
+                                            </span>
+                                        </div>
+                                        <div className="min-h-[80px]">
+                                            {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
+                                        </div>
+                                    </div>
+                                )
+                            }
+                            // It's a break
                             return (
-                                <div key={slot.startTime} className="flex items-stretch border-b border-gray-200 dark:border-dark-border min-h-[80px]">
-                                    <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center font-semibold text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
-                                        <span className="text-xs">{formatTime12h(slot.startTime)}</span>
-                                        <span className="my-1 text-xs text-gray-400">to</span>
-                                        <span className="text-xs">{formatTime12h(slot.endTime)}</span>
-                                    </div>
-                                    <div className="flex-grow p-1">
-                                        {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
-                                    </div>
+                                <div key={slot.startTime} className="flex items-center justify-center py-1">
+                                    <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider">{slot.name} Break</span>
                                 </div>
                             )
-                        }
-                        // It's a break
-                        const breakHeight = slot.name === 'Lunch' ? 'h-10' : 'h-6';
-                        return (
-                             <div key={slot.startTime} className={`flex items-stretch border-b border-gray-200 dark:border-dark-border ${breakHeight}`}>
-                                <div className={`w-24 flex-shrink-0 flex items-center justify-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-r dark:border-dark-border`}>
-                                    {slot.name}
-                                </div>
-                                <div className="flex-grow bg-gray-50 dark:bg-gray-800/50"></div>
-                            </div>
-                        )
-                    })}
-                    {!mobileDailyViewClassroom && <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
+                        }) : <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
                     </div>
                 </>
             )}
