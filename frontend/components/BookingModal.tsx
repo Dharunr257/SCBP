@@ -195,23 +195,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
             <input id="contactNo" type="tel" placeholder="Contact No." value={contactNo} onChange={(e) => setContactNo(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
             <input id="subject" type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
             <div>
-                <label className="sr-only">Class Year</label>
-                <div className="grid grid-cols-4 gap-2 h-[42px] items-center mt-1">
-                    {['1st', '2nd', '3rd', '4th'].map(year => (
-                        <label key={year} title={`${year} Year`} className={`flex items-center justify-center p-2 rounded-md transition-colors cursor-pointer border h-full ${classYear === `${year} Year` ? 'bg-primary/20 dark:bg-primary-dark/30 border-primary dark:border-primary-dark' : 'hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-600'}`}>
-                            <input
-                                type="radio"
-                                name="classYear"
-                                value={`${year} Year`}
-                                checked={classYear === `${year} Year`}
-                                onChange={() => { if (isEditable) setClassYear(`${year} Year`); }}
-                                disabled={!isEditable}
-                                className="sr-only"
-                            />
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{year}</span>
-                        </label>
-                    ))}
-                </div>
+              <label htmlFor="classYear" className="sr-only">Class Year</label>
+              <select
+                id="classYear"
+                value={classYear}
+                onChange={(e) => setClassYear(e.target.value)}
+                required
+                disabled={!isEditable}
+                className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary h-[42px] disabled:bg-gray-100 dark:disabled:bg-gray-800"
+              >
+                <option value="" disabled>Select Class Year</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
             </div>
             {isSingleClassroom ? (
                  <input type="text" value={classrooms[0].name} disabled className="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2" />
