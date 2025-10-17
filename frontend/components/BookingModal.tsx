@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Booking, Classroom, User, UserRole } from '../types';
 import { CloseIcon, TrashIcon } from './Icons';
@@ -195,8 +194,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
             <input id="staffName" type="text" placeholder="Staff Name" value={staffName} onChange={(e) => setStaffName(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
             <input id="contactNo" type="tel" placeholder="Contact No." value={contactNo} onChange={(e) => setContactNo(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
             <input id="subject" type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
-            <input id="classYear" type="text" placeholder="Class Year (e.g., II Year)" value={classYear} onChange={(e) => setClassYear(e.target.value)} required disabled={!isEditable} className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-800" />
-             
+            <div>
+                <label className="sr-only">Class Year</label>
+                <div className="grid grid-cols-4 gap-2 h-[42px] items-center mt-1">
+                    {['1st', '2nd', '3rd', '4th'].map(year => (
+                        <label key={year} title={`${year} Year`} className={`flex items-center justify-center p-2 rounded-md transition-colors cursor-pointer border h-full ${classYear === `${year} Year` ? 'bg-primary/20 dark:bg-primary-dark/30 border-primary dark:border-primary-dark' : 'hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-600'}`}>
+                            <input
+                                type="radio"
+                                name="classYear"
+                                value={`${year} Year`}
+                                checked={classYear === `${year} Year`}
+                                onChange={() => { if (isEditable) setClassYear(`${year} Year`); }}
+                                disabled={!isEditable}
+                                className="sr-only"
+                            />
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{year}</span>
+                        </label>
+                    ))}
+                </div>
+            </div>
             {isSingleClassroom ? (
                  <input type="text" value={classrooms[0].name} disabled className="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2" />
             ) : (
