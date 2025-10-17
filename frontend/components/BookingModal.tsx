@@ -173,9 +173,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onS
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl p-8 w-full max-w-2xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start md:items-center z-50 p-4 pt-12 md:p-0">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl p-6 md:p-8 w-full max-w-2xl relative overflow-y-auto max-h-[90vh]">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white z-10">
           <CloseIcon className="h-6 w-6" />
         </button>
         <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">{modalTitle[mode]}</h2>

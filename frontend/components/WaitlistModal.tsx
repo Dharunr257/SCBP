@@ -58,8 +58,8 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose, onSave, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl p-8 w-full max-w-lg relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start md:items-center z-50 p-4 pt-12 md:p-0">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl p-6 md:p-8 w-full max-w-lg relative overflow-y-auto max-h-[90vh]">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white">
           <CloseIcon className="h-6 w-6" />
         </button>
