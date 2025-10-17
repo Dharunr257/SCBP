@@ -4,7 +4,6 @@ import { CollegeLogo, BellIcon, MenuIcon, CloseIcon, SunIcon, MoonIcon } from '.
 
 interface HeaderProps {
   user: User;
-  onLogout: () => void;
   onToggleSidebar: () => void;
   notifications: Notification[];
   unreadCount: number;
@@ -39,7 +38,7 @@ const NotificationPanel: React.FC<{ notifications: Notification[], onClose: () =
 };
 
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar, notifications, unreadCount, onMarkNotificationsAsRead, theme, onThemeToggle }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onToggleSidebar, notifications, unreadCount, onMarkNotificationsAsRead, theme, onThemeToggle }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   const handleToggleNotifications = () => {
@@ -50,12 +49,12 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar,
   };
 
   return (
-    <header className="bg-white dark:bg-dark-card shadow-md p-4 flex items-center justify-between z-20 sticky top-0 dark:border-b dark:border-dark-border">
+    <header className="bg-white dark:bg-dark-card shadow-md px-4 py-3 md:p-4 flex items-center justify-between z-20 sticky top-0 dark:border-b dark:border-dark-border">
       <div className="flex items-center space-x-4">
         <button onClick={onToggleSidebar} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 md:block hidden">
             <MenuIcon className="h-6 w-6 text-gray-600 dark:text-gray-300"/>
         </button>
-        <CollegeLogo className="h-10 w-10 text-primary dark:text-primary-dark" />
+        <CollegeLogo className="h-8 w-8 md:h-10 md:w-10 text-primary dark:text-primary-dark" />
         <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 hidden md:block">
           SmartClass Booking
         </h1>
@@ -86,9 +85,6 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar,
             <p className="font-semibold text-gray-800 dark:text-gray-100">{user.name}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">{user.role} - {user.department}</p>
           </div>
-          <button onClick={onLogout} className="text-sm bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Logout
-          </button>
         </div>
       </div>
     </header>

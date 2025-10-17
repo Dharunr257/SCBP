@@ -551,6 +551,7 @@ const App: React.FC = () => {
                     onUpdateProfile={handleUpdateProfile}
                     settings={settings}
                     onUpdateSetting={handleUpdateSetting}
+                    onLogout={handleLogout}
                 />;
             default:
                 return <Dashboard 
@@ -578,7 +579,6 @@ const App: React.FC = () => {
             <div className="flex flex-col flex-1 w-full overflow-hidden">
                 <Header 
                     user={currentUser} 
-                    onLogout={handleLogout}
                     onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
                     notifications={notifications}
                     unreadCount={unreadNotifications.length}

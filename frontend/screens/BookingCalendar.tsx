@@ -272,42 +272,44 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
     return (
         <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Classroom Bookings</h2>
-                <div className="flex items-center space-x-2 md:space-x-4">
-                    <button onClick={() => handleDateChange(-1)} 
-                        disabled={isPrevDisabled}
-                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Previous period"
-                    >
-                        <ChevronLeftIcon className="h-6 w-6 text-gray-600 dark:text-gray-300"/>
-                    </button>
-                    <div className="relative">
-                       <button
-                            onClick={() => setIsDatePickerOpen(true)}
-                            className="font-semibold text-lg text-center text-gray-700 dark:text-gray-200 min-w-[240px] md:min-w-0 px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                            aria-label="Select date"
+                <div className="w-full flex justify-between items-center">
+                    <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white flex-shrink-0">Bookings</h2>
+                    <div className="flex items-center space-x-1 md:space-x-4">
+                        <button onClick={() => handleDateChange(-1)} 
+                            disabled={isPrevDisabled}
+                            className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Previous period"
                         >
-                            {renderHeader()}
+                            <ChevronLeftIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
                         </button>
-                        {isDatePickerOpen && (
-                            <DatePicker
-                                selectedDate={currentDate}
-                                onChange={handleDateSelect}
-                                minDate={today}
-                                maxDate={maxDate}
-                                onClose={() => setIsDatePickerOpen(false)}
-                            />
-                        )}
+                        <div className="relative">
+                           <button
+                                onClick={() => setIsDatePickerOpen(true)}
+                                className="font-semibold text-base md:text-lg text-center text-gray-700 dark:text-gray-200 md:min-w-[240px] px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                aria-label="Select date"
+                            >
+                                {renderHeader()}
+                            </button>
+                            {isDatePickerOpen && (
+                                <DatePicker
+                                    selectedDate={currentDate}
+                                    onChange={handleDateSelect}
+                                    minDate={today}
+                                    maxDate={maxDate}
+                                    onClose={() => setIsDatePickerOpen(false)}
+                                />
+                            )}
+                        </div>
+                        <button onClick={() => handleDateChange(1)} 
+                            disabled={isNextDisabled}
+                            className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Next period"
+                        >
+                            <ChevronRightIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
+                        </button>
                     </div>
-                    <button onClick={() => handleDateChange(1)} 
-                        disabled={isNextDisabled}
-                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Next period"
-                    >
-                        <ChevronRightIcon className="h-6 w-6 text-gray-600 dark:text-gray-300"/>
-                    </button>
                 </div>
-                 <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md self-center">
+                 <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md self-center md:self-auto">
                     <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
                     <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
                 </div>

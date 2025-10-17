@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Setting, UserRole } from '../types';
 import { Spinner } from '../components/Spinner';
@@ -9,9 +8,10 @@ interface SettingsProps {
     onUpdateProfile: (userData: { name: string, email: string }) => Promise<{ success: boolean, message: string }>;
     settings: Setting[];
     onUpdateSetting: (key: string, value: string) => void;
+    onLogout: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUpdateProfile, settings, onUpdateSetting }) => {
+const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUpdateProfile, settings, onUpdateSetting, onLogout }) => {
     // Password State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -153,6 +153,19 @@ const Settings: React.FC<SettingsProps> = ({ currentUser, onChangePassword, onUp
               </div>
             </form>
           </div>
+
+           <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6">
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Account Actions</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Logging out will end your current session and require you to sign in again.
+                </p>
+                <button
+                    onClick={onLogout}
+                    className="w-full md:w-auto text-sm bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                    Logout
+                </button>
+            </div>
 
         </div>
         
