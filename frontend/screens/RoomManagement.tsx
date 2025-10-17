@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Classroom, User, UserRole, LogAction, RoomBlock } from '../types';
 import { PlusIcon, TrashIcon, CloseIcon, EditIcon } from '../components/Icons';
@@ -127,7 +128,7 @@ const BlockRoomModal: React.FC<BlockRoomModalProps> = ({ isOpen, onClose, onSave
                                 {periods.length === PERIODS.length ? 'Deselect All' : 'Select All (Full Day)'}
                             </button>
                         </div>
-                        <div className="grid grid-cols-4 gap-2 p-3 border dark:border-gray-600 rounded-lg">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 border dark:border-gray-600 rounded-lg">
                             {PERIODS.map(p => (
                                 <label key={p.period} className={`flex items-center space-x-2 p-2 rounded-md transition-colors cursor-pointer ${periods.includes(p.period) ? 'bg-primary/20 dark:bg-primary-dark/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                                     <input type="checkbox" checked={periods.includes(p.period)} onChange={() => handlePeriodChange(p.period)} className="h-4 w-4 rounded text-primary focus:ring-primary-dark" />
@@ -222,12 +223,12 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
       
        <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-6 mb-8">
             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Add New Classroom</h3>
-            <form onSubmit={handleAddNewRoom} className="flex items-end gap-4">
-                <div className="flex-grow">
+            <form onSubmit={handleAddNewRoom} className="flex flex-col sm:flex-row items-end gap-4">
+                <div className="flex-grow w-full">
                     <label htmlFor="new-room-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Classroom Name</label>
                     <input id="new-room-name" type="text" value={newRoomName} onChange={e => setNewRoomName(e.target.value)} required className="mt-1 block w-full border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white rounded-md shadow-sm p-2" />
                 </div>
-                <button type="submit" disabled={isAddingRoom} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 h-[42px] w-36 disabled:bg-gray-400">
+                <button type="submit" disabled={isAddingRoom} className="bg-primary dark:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-800 dark:hover:bg-blue-500 flex items-center justify-center space-x-2 h-[42px] w-full sm:w-36 disabled:bg-gray-400">
                     {isAddingRoom ? <Spinner size="sm" color="text-white"/> : <><PlusIcon className="h-5 w-5" /><span>Add Room</span></>}
                 </button>
             </form>
@@ -261,14 +262,16 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
                         {room.status}
                     </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button onClick={() => handleEditRoom(room)} className="font-bold py-1 px-3 rounded-lg text-xs bg-gray-500 hover:bg-gray-600 text-white w-20 h-7 flex justify-center items-center"><EditIcon className="w-4 h-4 mr-1"/> Edit</button>
-                        <button onClick={() => handleToggleMaintenance(room)} disabled={actionsLoading[`status-${room._id}`]} className={`font-bold py-1 px-3 rounded-lg text-xs w-32 h-7 flex justify-center items-center ${room.status === 'available' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-green-500 hover:bg-green-600 text-white'} disabled:bg-gray-400`}>
-                            {actionsLoading[`status-${room._id}`] ? <Spinner size="sm" color="text-white"/> : (room.status === 'available' ? 'Set Maintenance' : 'Set Available')}
-                        </button>
-                        <button onClick={() => handleDeleteRoom(room._id, room.name)} disabled={actionsLoading[`delete-room-${room._id}`]} className="font-bold py-1 px-3 rounded-lg text-xs bg-red-500 hover:bg-red-600 text-white w-20 h-7 flex justify-center items-center disabled:bg-gray-400">
-                            {actionsLoading[`delete-room-${room._id}`] ? <Spinner size="sm" color="text-white"/> : 'Delete'}
-                        </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                       <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                            <button onClick={() => handleEditRoom(room)} className="font-bold py-1 px-3 rounded-lg text-xs bg-gray-500 hover:bg-gray-600 text-white w-20 h-7 flex justify-center items-center"><EditIcon className="w-4 h-4 mr-1"/> Edit</button>
+                            <button onClick={() => handleToggleMaintenance(room)} disabled={actionsLoading[`status-${room._id}`]} className={`font-bold py-1 px-3 rounded-lg text-xs w-32 h-7 flex justify-center items-center ${room.status === 'available' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-green-500 hover:bg-green-600 text-white'} disabled:bg-gray-400`}>
+                                {actionsLoading[`status-${room._id}`] ? <Spinner size="sm" color="text-white"/> : (room.status === 'available' ? 'Set Maintenance' : 'Set Available')}
+                            </button>
+                            <button onClick={() => handleDeleteRoom(room._id, room.name)} disabled={actionsLoading[`delete-room-${room._id}`]} className="font-bold py-1 px-3 rounded-lg text-xs bg-red-500 hover:bg-red-600 text-white w-20 h-7 flex justify-center items-center disabled:bg-gray-400">
+                                {actionsLoading[`delete-room-${room._id}`] ? <Spinner size="sm" color="text-white"/> : 'Delete'}
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 ))}
@@ -277,46 +280,78 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ currentUser, classrooms
         </div>
       </div>
       
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-md">
         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 p-6">Current Temporary Blocks</h3>
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Classroom</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periods</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Blocked By</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                    {roomBlocks.length > 0 ? roomBlocks.map(block => {
-                        const room = classrooms.find(c => c._id === block.classroomId);
-                        const user = users.find(u => u._id === block.userId);
-                        return (
-                            <tr key={block._id}>
-                                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-white">{room?.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{block.date}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {block.periods.length === PERIODS.length ? 'All Day' : `P: ${block.periods.join(', ')}`}
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{block.reason}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user?.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => handleDeleteBlockAction(block._id)} disabled={actionsLoading[`delete-block-${block._id}`]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 w-28 h-7 flex justify-center items-center disabled:text-gray-400">
-                                        {actionsLoading[`delete-block-${block._id}`] ? <Spinner size="sm" /> : 'Remove Block'}
-                                    </button>
-                                </td>
-                            </tr>
-                        )
-                    }) : (
-                        <tr><td colSpan={6} className="text-center p-8 text-gray-500 dark:text-gray-400">No temporary room blocks found.</td></tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
+        {roomBlocks.length > 0 ? (
+          <>
+            {/* Mobile View */}
+            <div className="md:hidden divide-y divide-gray-200 dark:divide-dark-border">
+              {roomBlocks.map(block => {
+                const room = classrooms.find(c => c._id === block.classroomId);
+                const user = users.find(u => u._id === block.userId);
+                return (
+                  <div key={block._id} className="p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-gray-800 dark:text-gray-200">{room?.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{block.date}</p>
+                      </div>
+                      <button onClick={() => handleDeleteBlockAction(block._id)} disabled={actionsLoading[`delete-block-${block._id}`]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 w-28 h-7 flex justify-center items-center disabled:text-gray-400 text-sm">
+                          {actionsLoading[`delete-block-${block._id}`] ? <Spinner size="sm" /> : 'Remove Block'}
+                      </button>
+                    </div>
+                    <div>
+                      <p className="text-sm"><span className="font-semibold">Periods:</span> {block.periods.length === PERIODS.length ? 'All Day' : `P: ${block.periods.join(', ')}`}</p>
+                      <p className="text-sm"><span className="font-semibold">Reason:</span> {block.reason}</p>
+                      <p className="text-sm"><span className="font-semibold">Blocked By:</span> {user?.name}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Desktop View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Classroom</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periods</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Reason</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Blocked By</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                      {roomBlocks.map(block => {
+                          const room = classrooms.find(c => c._id === block.classroomId);
+                          const user = users.find(u => u._id === block.userId);
+                          return (
+                              <tr key={block._id}>
+                                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-white">{room?.name}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{block.date}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                      {block.periods.length === PERIODS.length ? 'All Day' : `P: ${block.periods.join(', ')}`}
+                                  </td>
+                                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{block.reason}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user?.name}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                      <button onClick={() => handleDeleteBlockAction(block._id)} disabled={actionsLoading[`delete-block-${block._id}`]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 w-28 h-7 flex justify-center items-center disabled:text-gray-400">
+                                          {actionsLoading[`delete-block-${block._id}`] ? <Spinner size="sm" /> : 'Remove Block'}
+                                      </button>
+                                  </td>
+                              </tr>
+                          )
+                      })}
+                  </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="text-center p-8 text-gray-500 dark:text-gray-400">
+            No temporary room blocks found.
+          </div>
+        )}
       </div>
 
       <BlockRoomModal 

@@ -29,6 +29,11 @@ export const getAllData = async (req, res) => {
             { $set: { status: 'completed' } }
         );
 
+        // Auto-delete notifications older than two days
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        await Notification.deleteMany({ timestamp: { $lt: twoDaysAgo } });
+
         const [users, classrooms, bookings, waitlist, roomBlocks, historyLogs, notifications, settings] = await Promise.all([
             User.find({}).select('-password'),
             Classroom.find({}).sort({ name: 1 }),

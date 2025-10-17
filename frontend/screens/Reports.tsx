@@ -78,16 +78,17 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
 
         return filteredBookings
             .filter(b => b.status === 'completed' && new Date(b.createdAt) >= twoMonthsAgo)
-            .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
+            .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .map((b, index) => {
                 const user = users.find(u => u._id === b.userId);
                 return {
+                    _id: b._id,
                     'S.NO': index + 1,
                     'Staff Name': b.staffName,
                     'Subject': b.subject,
                     'Department': user?.department || 'N/A',
                     'Contact No': b.contactNo,
-                    'Booking On': b.createdAt.toLocaleString(),
+                    'Booking On': new Date(b.createdAt).toLocaleString(),
                     'Class Conducting On': `${new Date(b.date).toLocaleDateString()} ${formatTime12h(b.startTime)}`,
                     'Hour No': b.period,
                     'Starting Time': formatTime12h(b.startTime),
@@ -101,7 +102,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
             alert("No data to export.");
             return;
         }
-        const headers = Object.keys(data[0]);
+        const headers = Object.keys(data[0]).filter(key => key !== '_id');
         const csvContent = "data:text/csv;charset=utf-8," 
             + headers.join(",") + "\n" 
             + data.map(e => headers.map(header => `"${e[header]}"`).join(",")).join("\n");
@@ -174,36 +175,55 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                 >
                     <DownloadIcon className="w-5 h-5"/>
                 </button>
-                <div className="max-h-96 overflow-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border text-xs">
-                        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                            <tr>
-                                {bookingRecords.length > 0 && Object.keys(bookingRecords[0]).map(header => (
-                                    <th key={header} scope="col" className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{header}</th>
+                 <div className="max-h-96 overflow-y-auto">
+                    {bookingRecords.length > 0 ? (
+                        <>
+                            {/* Mobile View */}
+                            <div className="md:hidden space-y-4 p-1">
+                                {bookingRecords.map((record) => (
+                                    <div key={record._id} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs shadow">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sm text-gray-800 dark:text-gray-200">{record['Subject']}</p>
+                                                <p className="text-gray-600 dark:text-gray-400">{record['Staff Name']} - {record['Department']}</p>
+                                            </div>
+                                            <span className="text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">P{record['Hour No']}</span>
+                                        </div>
+                                        <div className="space-y-1 text-gray-500 dark:text-gray-400">
+                                            <p><span className="font-semibold">Class on:</span> {record['Class Conducting On']}</p>
+                                            <p><span className="font-semibold">Booked on:</span> {record['Booking On']}</p>
+                                            <p><span className="font-semibold">Contact:</span> {record['Contact No']}</p>
+                                        </div>
+                                    </div>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                            {bookingRecords.length > 0 ? bookingRecords.map((record, index) => (
-                                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['S.NO']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Staff Name']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Subject']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Department']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Contact No']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Booking On']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Class Conducting On']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Hour No']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Starting Time']}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Ending Time']}</td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={10} className="text-center py-8 text-gray-500 dark:text-gray-400">No completed booking records found for the last 2 months.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </div>
+                            {/* Desktop View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border text-xs">
+                                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                        <tr>
+                                            {Object.keys(bookingRecords[0]).filter(h => h !== '_id').map(header => (
+                                                <th key={header} scope="col" className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{header}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                        {bookingRecords.map((record) => (
+                                            <tr key={record._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                {Object.keys(record).filter(key => key !== '_id').map(key => (
+                                                     <td key={key} className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record[key as keyof typeof record]}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            No completed booking records found for the last 2 months.
+                        </div>
+                    )}
                 </div>
             </ReportCard>
         </div>

@@ -62,38 +62,62 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
 
     return (
         <DashboardCard title={currentUser.role === UserRole.HOD ? "Department Booking Records (Last 2 Months)" : "Booking Record Details (Last 2 Months)"} className="lg:col-span-4">
-            <div className="overflow-x-auto max-h-72">
-                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                        <tr>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">S.No</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Staff Name</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Department</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Booked On</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class Date</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Period</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                        {bookingRecords.length > 0 ? bookingRecords.map(record => (
-                            <tr key={record._id}>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['S.NO']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Staff Name']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Subject']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Department']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Booking On']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Class On']}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Period']}</td>
-                            </tr>
-                        )) : (
-                            <tr>
-                                <td colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">No recent booking records found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+             {bookingRecords.length > 0 ? (
+                <div className="overflow-y-auto max-h-72">
+                    {/* Mobile View: Cards */}
+                    <div className="md:hidden space-y-4">
+                        {bookingRecords.map(record => (
+                            <div key={record._id} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-bold text-gray-800 dark:text-gray-200">{record['Subject']}</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">{record['Staff Name']} - {record['Department']}</p>
+                                    </div>
+                                    <span className="text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded">P{record['Period']}</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
+                                    <span>Class on: {record['Class On']}</span>
+                                    <span>Booked on: {record['Booking On']}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">S.No</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Staff Name</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Department</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Booked On</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class Date</th>
+                                    <th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Period</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                {bookingRecords.map(record => (
+                                    <tr key={record._id}>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['S.NO']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Staff Name']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Subject']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Department']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Booking On']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Class On']}</td>
+                                        <td className="px-4 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{record['Period']}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No recent booking records found.
+                </div>
+            )}
         </DashboardCard>
     );
 };

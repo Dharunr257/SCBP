@@ -359,11 +359,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                         const isToday = formatDate(day) === formatDate(new Date());
                         return (
-                            <button key={dateKey} onClick={() => handleDayClick(day)} className={`relative min-h-[120px] p-1 border-r border-b border-gray-200 dark:border-dark-border group flex flex-col text-left ${isCurrentMonth ? 'bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                            <button key={dateKey} onClick={() => handleDayClick(day)} className={`relative min-h-[90px] sm:min-h-[120px] p-1 border-r border-b border-gray-200 dark:border-dark-border group flex flex-col text-left ${isCurrentMonth ? 'bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
                                 <div className={`flex items-center justify-center w-7 h-7 text-sm font-semibold rounded-full self-start ${isToday ? 'bg-primary text-white' : isCurrentMonth ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
                                     {day.getDate()}
                                 </div>
-                                <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px] flex-grow">
+                                <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px] flex-grow hidden sm:block">
                                     {dayBookings.slice(0, 3).map(booking => {
                                         const isOwnBooking = booking.userId === currentUser._id;
                                         const isPending = booking.status === 'pending';
@@ -386,6 +386,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                             + {dayBookings.length - 3} more
                                         </div>
                                     )}
+                                </div>
+                                <div className="flex-grow flex items-center justify-center sm:hidden">
+                                    {dayBookings.length > 0 && <div className="w-2 h-2 bg-primary rounded-full"></div>}
                                 </div>
                             </button>
                         );

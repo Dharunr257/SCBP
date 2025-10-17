@@ -233,8 +233,43 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onA
         </form>
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-md">
+        {/* Mobile View */}
+        <div className="md:hidden">
+          <ul className="divide-y divide-gray-200 dark:divide-dark-border">
+              {users.map(user => {
+                  let canEdit = (currentUser.role === UserRole.Principal && user.role !== UserRole.Principal) || (currentUser.role === UserRole.Dean && ![UserRole.Principal, UserRole.Dean].includes(user.role));
+                  if (user._id === currentUser._id) canEdit = false;
+
+                  let canDelete = (currentUser.role === UserRole.Principal && user.role !== UserRole.Principal) || (currentUser.role === UserRole.Dean && ![UserRole.Principal, UserRole.Dean].includes(user.role));
+                  if (user._id === currentUser._id) canDelete = false;
+
+                  return (
+                    <li key={user._id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{user.department}</p>
+                        </div>
+                         <div className='flex items-center space-x-2 flex-shrink-0'>
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{user.role}</span>
+                            {user.isIqacDean && (<span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">IQAC Dean</span>)}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-end space-x-4">
+                        <button onClick={() => handleEditClick(user)} disabled={!canEdit || actionsLoading[user._id]} className="text-primary dark:text-primary-dark hover:underline inline-flex items-center text-sm disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed disabled:no-underline"><EditIcon className="w-4 h-4 mr-1"/>Edit</button>
+                        <button onClick={() => handleDeleteClick(user._id, user.name)} disabled={!canDelete || actionsLoading[user._id]} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed inline-flex items-center w-20 h-7 justify-center text-sm">
+                           {actionsLoading[user._id] ? <Spinner size='sm'/> : <><TrashIcon className="w-4 h-4 mr-1"/>Delete</>}
+                        </button>
+                      </div>
+                    </li>
+                  );
+              })}
+          </ul>
+        </div>
+        {/* Desktop View */}
+        <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
             <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
