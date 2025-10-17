@@ -411,8 +411,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                     return (
                                         <React.Fragment key={slot.startTime}>
                                             {/* Time label */}
-                                            <div className="sticky left-0 bg-white dark:bg-dark-card h-28 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2 z-10">
-                                                {formatTime12h(slot.startTime)}
+                                            <div className="sticky left-0 bg-white dark:bg-dark-card h-28 flex flex-col items-center justify-center font-semibold text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2 z-10">
+                                                <span className="text-xs">{formatTime12h(slot.startTime)}</span>
+                                                <span className="my-1 text-xs text-gray-400">to</span>
+                                                <span className="text-xs">{formatTime12h(slot.endTime)}</span>
                                             </div>
                                             {/* Booking cells */}
                                             {classrooms.map(classroom => (
@@ -447,8 +449,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                         if (slot.type === 'period') {
                             return (
                                 <div key={slot.startTime} className="flex items-stretch border-b border-gray-200 dark:border-dark-border min-h-[80px]">
-                                    <div className="w-24 flex-shrink-0 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
-                                        {formatTime12h(slot.startTime)}
+                                    <div className="w-24 flex-shrink-0 flex flex-col items-center justify-center font-semibold text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
+                                        <span className="text-xs">{formatTime12h(slot.startTime)}</span>
+                                        <span className="my-1 text-xs text-gray-400">to</span>
+                                        <span className="text-xs">{formatTime12h(slot.endTime)}</span>
                                     </div>
                                     <div className="flex-grow p-1">
                                         {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
