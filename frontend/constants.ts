@@ -12,11 +12,25 @@ export const PERIODS = [
     { period: 1, startTime: '08:45', endTime: '09:35' },
     { period: 2, startTime: '09:35', endTime: '10:25' },
     { period: 3, startTime: '10:35', endTime: '11:25' },
-    { period: 4, startTime: '11:25', endTime: '12:45' },
+    { period: 4, startTime: '11:25', endTime: '12:15' },
     { period: 5, startTime: '12:45', endTime: '13:35' },
     { period: 6, startTime: '13:35', endTime: '14:25' },
     { period: 7, startTime: '14:35', endTime: '15:25' },
     { period: 8, startTime: '15:25', endTime: '16:15' },
+];
+
+export const ALL_DAY_SLOTS = [
+    { type: 'period', period: 1, startTime: '08:45', endTime: '09:35' },
+    { type: 'period', period: 2, startTime: '09:35', endTime: '10:25' },
+    { type: 'break', startTime: '10:25', endTime: '10:35', name: 'Break' },
+    { type: 'period', period: 3, startTime: '10:35', endTime: '11:25' },
+    { type: 'period', period: 4, startTime: '11:25', endTime: '12:15' },
+    { type: 'break', startTime: '12:15', endTime: '12:45', name: 'Lunch' },
+    { type: 'period', period: 5, startTime: '12:45', endTime: '13:35' },
+    { type: 'period', period: 6, startTime: '13:35', endTime: '14:25' },
+    { type: 'break', startTime: '14:25', endTime: '14:35', name: 'Break' },
+    { type: 'period', period: 7, startTime: '14:35', endTime: '15:25' },
+    { type: 'period', period: 8, startTime: '15:25', endTime: '16:15' },
 ];
 
 export const formatTime12h = (time24: string): string => {

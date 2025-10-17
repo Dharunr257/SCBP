@@ -1,8 +1,6 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
-import { TIME_SLOTS, PERIODS, formatTime12h } from '../constants';
+import { ALL_DAY_SLOTS, PERIODS, formatTime12h } from '../constants';
 import { PlusIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, EditIcon, TrashIcon, ClipboardListIcon } from '../components/Icons';
 import DatePicker from '../components/DatePicker';
 
@@ -397,43 +395,78 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             ) : (
                 <>
                     {/* Desktop Daily View */}
-                    <div className="hidden md:grid grid-cols-[auto_1fr]">
-                        <div>
-                            {TIME_SLOTS.map(time => (
-                                <div key={time} className="h-28 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2">{formatTime12h(time)}</div>
+                    <div className="hidden md:block overflow-x-auto">
+                        <div className="grid" style={{ gridTemplateColumns: `auto repeat(${classrooms.length}, minmax(140px, 1fr))` }}>
+                            {/* First row: empty corner + classroom headers */}
+                            <div className="sticky top-0 left-0 z-30 bg-gray-100 dark:bg-dark-bg border-b border-r border-gray-200 dark:border-dark-border"></div>
+                            {classrooms.map(cr => (
+                                <div key={cr._id} className="text-center font-semibold text-sm p-2 h-12 flex items-center justify-center border-b border-r border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card text-gray-700 dark:text-gray-200 sticky top-0 z-20">
+                                    {cr.name}
+                                </div>
                             ))}
-                        </div>
-                        <div className="overflow-x-auto">
-                            <div className="grid" style={{ gridTemplateColumns: `repeat(${classrooms.length}, minmax(140px, 1fr))` }}>
-                                {classrooms.map(cr => (
-                                    <div key={cr._id} className="text-center font-semibold text-sm p-2 h-12 flex items-center justify-center border-b border-r border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card text-gray-700 dark:text-gray-200 sticky top-0 z-10">
-                                        {cr.name}
-                                    </div>
-                                ))}
-                                {TIME_SLOTS.map(time => (
-                                    <React.Fragment key={time}>
-                                        {classrooms.map(classroom => (
-                                            <div key={`${classroom._id}-${time}`} className="h-28 p-1 border-r border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
-                                                {renderSlot(calendarDays[0], time, classroom)}
+
+                            {/* Subsequent rows for each slot */}
+                            {ALL_DAY_SLOTS.map(slot => {
+                                if (slot.type === 'period') {
+                                    return (
+                                        <React.Fragment key={slot.startTime}>
+                                            {/* Time label */}
+                                            <div className="sticky left-0 bg-white dark:bg-dark-card h-28 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2 z-10">
+                                                {formatTime12h(slot.startTime)}
                                             </div>
-                                        ))}
+                                            {/* Booking cells */}
+                                            {classrooms.map(classroom => (
+                                                <div key={`${classroom._id}-${slot.startTime}`} className="h-28 p-1 border-r border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
+                                                    {renderSlot(calendarDays[0], slot.startTime, classroom)}
+                                                </div>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                }
+                                // It's a break
+                                const breakHeight = slot.name === 'Lunch' ? 'h-12' : 'h-8';
+                                return (
+                                    <React.Fragment key={slot.startTime}>
+                                        {/* Time label for break */}
+                                        <div className={`sticky left-0 ${breakHeight} flex items-center justify-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-r border-b border-gray-200 dark:border-dark-border z-10`}>
+                                            {slot.name}
+                                        </div>
+                                        {/* Break cells */}
+                                        <div
+                                            className={`${breakHeight} bg-gray-50 dark:bg-gray-800/50 border-b border-r border-gray-200 dark:border-dark-border`}
+                                            style={{ gridColumn: `span ${classrooms.length}` }}
+                                        ></div>
                                     </React.Fragment>
-                                ))}
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
                     {/* Mobile Daily View */}
                     <div className="md:hidden">
-                    {mobileDailyViewClassroom && TIME_SLOTS.map(time => (
-                        <div key={time} className="flex items-stretch border-b border-gray-200 dark:border-dark-border min-h-[80px]">
-                            <div className="w-24 flex-shrink-0 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
-                                {formatTime12h(time)}
+                    {mobileDailyViewClassroom && ALL_DAY_SLOTS.map(slot => {
+                        if (slot.type === 'period') {
+                            return (
+                                <div key={slot.startTime} className="flex items-stretch border-b border-gray-200 dark:border-dark-border min-h-[80px]">
+                                    <div className="w-24 flex-shrink-0 flex items-center justify-center font-semibold text-sm text-gray-500 dark:text-gray-400 border-r dark:border-dark-border px-1 text-center">
+                                        {formatTime12h(slot.startTime)}
+                                    </div>
+                                    <div className="flex-grow p-1">
+                                        {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
+                                    </div>
+                                </div>
+                            )
+                        }
+                        // It's a break
+                        const breakHeight = slot.name === 'Lunch' ? 'h-10' : 'h-6';
+                        return (
+                             <div key={slot.startTime} className={`flex items-stretch border-b border-gray-200 dark:border-dark-border ${breakHeight}`}>
+                                <div className={`w-24 flex-shrink-0 flex items-center justify-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-r dark:border-dark-border`}>
+                                    {slot.name}
+                                </div>
+                                <div className="flex-grow bg-gray-50 dark:bg-gray-800/50"></div>
                             </div>
-                            <div className="flex-grow p-1">
-                                {renderSlot(calendarDays[0], time, mobileDailyViewClassroom)}
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                     {!mobileDailyViewClassroom && <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
                     </div>
                 </>

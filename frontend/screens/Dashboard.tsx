@@ -1,9 +1,8 @@
-
-
 import React, { useMemo, useState } from 'react';
 import { Booking, User, Classroom, UserRole, WaitlistEntry } from '../types';
 import { formatTime12h } from '../constants';
 import { Spinner } from '../components/Spinner';
+import { ChartBarIcon, ClockIcon, DocumentTextIcon, CheckCircleIcon } from '../components/Icons';
 
 interface DashboardProps {
   currentUser: User;
@@ -18,9 +17,12 @@ interface DashboardProps {
   isApprovalEnabled: boolean;
 }
 
-const DashboardCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className = '' }) => (
+const DashboardCard: React.FC<{ title: string; icon?: React.FC<{className?: string}>; children: React.ReactNode; className?: string }> = ({ title, icon: Icon, children, className = '' }) => (
     <div className={`bg-white dark:bg-dark-card rounded-lg shadow-md p-6 ${className}`}>
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{title}</h3>
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
+            {Icon && <Icon className="w-6 h-6 mr-3 text-primary dark:text-primary-dark" />}
+            {title}
+        </h3>
         {children}
     </div>
 );
@@ -61,7 +63,7 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
     }, [bookings, users, currentUser]);
 
     return (
-        <DashboardCard title={currentUser.role === UserRole.HOD ? "Department Booking Records (Last 2 Months)" : "Booking Record Details (Last 2 Months)"} className="lg:col-span-4">
+        <DashboardCard title={currentUser.role === UserRole.HOD ? "Department Booking Records (Last 2 Months)" : "Booking Record Details (Last 2 Months)"} icon={DocumentTextIcon} className="lg:col-span-4">
              {bookingRecords.length > 0 ? (
                 <div className="overflow-y-auto max-h-72">
                     {/* Mobile View: Cards */}
@@ -143,7 +145,7 @@ const ApprovalDashboard: React.FC<{
     }
     
     return (
-        <DashboardCard title="Pending Booking Approvals" className="lg:col-span-4">
+        <DashboardCard title="Pending Booking Approvals" icon={CheckCircleIcon} className="lg:col-span-4">
             <div className="space-y-3 max-h-72 overflow-y-auto">
                 {pendingBookings.length > 0 ? pendingBookings.map(b => {
                     const user = users.find(u => u._id === b.userId);
@@ -214,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
 
             {[UserRole.Dean, UserRole.HOD, UserRole.Faculty].includes(currentUser.role) && (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <DashboardCard title="System Stats">
+                    <DashboardCard title="System Stats" icon={ChartBarIcon}>
                         <div className="space-y-3">
                             <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">Total Confirmed</span><span className="font-bold text-2xl text-primary dark:text-primary-dark">{totalBookings}</span></div>
                             <div className="flex justify-between items-center"><span className="text-gray-600 dark:text-gray-400">My Bookings</span><span className="font-bold text-2xl text-secondary dark:text-secondary-dark">{userBookings.length}</span></div>
@@ -222,7 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, bookings, classrooms
                         </div>
                     </DashboardCard>
 
-                    <DashboardCard title="Upcoming/Pending Bookings" className="lg:col-span-3">
+                    <DashboardCard title="Upcoming/Pending Bookings" icon={ClockIcon} className="lg:col-span-3">
                        <div className="space-y-3 max-h-48 overflow-y-auto">
                             {userBookings.length > 0 ? userBookings.slice(0, 5).map(b => {
                                 const room = classrooms.find(c => c._id === b.classroomId);

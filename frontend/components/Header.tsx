@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { User, Notification } from '../types';
 import { CollegeLogo, BellIcon, MenuIcon, CloseIcon, SunIcon, MoonIcon } from './Icons';
@@ -17,7 +15,7 @@ interface HeaderProps {
 
 const NotificationPanel: React.FC<{ notifications: Notification[], onClose: () => void }> = ({ notifications, onClose }) => {
     return (
-        <div className="absolute top-16 right-0 w-80 bg-white dark:bg-dark-card rounded-lg shadow-xl border dark:border-dark-border z-50">
+        <div className="absolute top-16 right-4 left-4 sm:left-auto sm:w-80 bg-white dark:bg-dark-card rounded-lg shadow-xl border dark:border-dark-border z-50">
             <div className="p-4 border-b dark:border-dark-border flex justify-between items-center">
                 <h4 className="font-bold text-gray-800 dark:text-gray-100">Notifications</h4>
                 <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
