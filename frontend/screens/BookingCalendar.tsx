@@ -272,18 +272,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     return (
         <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
-            <div className="flex flex-wrap justify-between items-center mb-6 gap-y-4">
-                {/* Title */}
-                <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white">Bookings</h2>
+            <header className="flex flex-wrap justify-between items-center mb-6 gap-y-4">
+                <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white flex-1">Bookings</h2>
 
-                {/* Mobile Toggle */}
-                <div className="md:hidden bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
-                    <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
-                    <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
-                </div>
-
-                {/* Date Selector (centered on mobile, in the middle on desktop) */}
-                <div className="flex items-center space-x-1 w-full md:w-auto justify-center">
+                <div className="flex items-center justify-center space-x-1 w-full md:w-auto md:absolute md:left-1/2 md:-translate-x-1/2">
                     <button onClick={() => handleDateChange(-1)} 
                         disabled={isPrevDisabled}
                         className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -294,7 +286,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                     <div className="relative">
                        <button
                             onClick={() => setIsDatePickerOpen(true)}
-                            className="font-semibold text-base md:text-lg text-center text-gray-700 dark:text-gray-200 md:min-w-[240px] px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            className="font-semibold text-base md:text-lg text-center text-gray-700 dark:text-gray-200 md:min-w-[280px] px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                             aria-label="Select date"
                         >
                             {renderHeader()}
@@ -318,12 +310,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                     </button>
                 </div>
 
-                {/* Desktop Toggle */}
-                <div className="hidden md:block bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
+                <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md flex-1 flex justify-end">
                     <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
                     <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
                 </div>
-            </div>
+            </header>
             {view === 'Daily' && (
                 <div className="md:hidden mb-4">
                     <label htmlFor="classroom-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Classroom</label>
@@ -337,9 +328,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                     </select>
                 </div>
             )}
-            <div className="flex-grow overflow-auto">
+            <div className="flex-grow">
             {view === 'Monthly' ? (
-                <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-dark-border h-full">
+                <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-dark-border">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                         <div key={day} className="text-center font-bold p-2 border-b-2 border-primary dark:border-primary-dark sticky top-0 bg-gray-100 dark:bg-dark-bg z-10 text-gray-700 dark:text-gray-300 text-sm">
                             {day}
