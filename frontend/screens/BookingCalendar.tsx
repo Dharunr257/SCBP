@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { ALL_DAY_SLOTS, PERIODS, formatTime12h } from '../constants';
@@ -271,7 +272,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
     const mobileDailyViewClassroom = classrooms.find(c => c._id === selectedClassroomId);
 
     return (
-        <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
+        <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg min-h-full flex flex-col">
             <header className="flex flex-wrap justify-between items-center mb-6 gap-y-4">
                 <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white flex-1">Bookings</h2>
 
