@@ -1,8 +1,7 @@
 import React from 'react';
+import logo from '@/assets/logo.svg';
 
-// FIX: Replaced missing logo.png with an inline SVG data URI to resolve build errors.
-export const logoUrl = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMDA0QUFEIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjUwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIj5TQzwvdGV4dD48L3N2Zz4=';
-
+export const logoUrl = logo;
 
 interface IconProps {
   className?: string;
