@@ -270,7 +270,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
     const mobileDailyViewClassroom = classrooms.find(c => c._id === selectedClassroomId);
 
     return (
-        <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg">
+        <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
             <header className="flex flex-wrap justify-between items-center mb-6 gap-y-4">
                 {/* Title */}
                 <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white">Bookings</h2>
@@ -336,134 +336,135 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                     </select>
                 </div>
             )}
-
-            {view === 'Monthly' ? (
-                <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-dark-border">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center font-bold p-2 border-b-2 border-primary dark:border-primary-dark sticky top-0 bg-gray-100 dark:bg-dark-bg z-10 text-gray-700 dark:text-gray-300 text-sm">
-                            {day}
-                        </div>
-                    ))}
-                    {calendarDays.map((day) => {
-                        const dateKey = formatDate(day);
-                        const dayBookings = bookingsByDate.get(dateKey) || [];
-                        const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                        const isToday = formatDate(day) === formatDate(new Date());
-                        return (
-                            <button key={dateKey} onClick={() => handleDayClick(day)} className={`relative min-h-[90px] sm:min-h-[120px] p-1 border-r border-b border-gray-200 dark:border-dark-border group flex flex-col text-left ${isCurrentMonth ? 'bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
-                                <div className={`flex items-center justify-center w-7 h-7 text-sm font-semibold rounded-full self-start ${isToday ? 'bg-primary text-white' : isCurrentMonth ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
-                                    {day.getDate()}
-                                </div>
-                                <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px] flex-grow hidden sm:block">
-                                    {dayBookings.slice(0, 3).map(booking => {
-                                        const isOwnBooking = booking.userId === currentUser._id;
-                                        const isPending = booking.status === 'pending';
-                                        const isOverridden = booking.status === 'overridden';
-                                        let bgColor = 'bg-booked/80';
-                                        if (isPending) bgColor = 'bg-yellow-200/80';
-                                        if (isOwnBooking) bgColor = 'bg-secondary/80';
-                                        if (isOverridden) bgColor = 'bg-purple-400/80';
-                                        
-                                        return (
-                                            <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>
-                                                <div className="flex items-center">
-                                                    <span className="font-semibold truncate">{booking.subject}</span>
+            <div className="flex-grow overflow-auto">
+                {view === 'Monthly' ? (
+                    <div className="grid grid-cols-7 border-l border-t border-gray-200 dark:border-dark-border">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="text-center font-bold p-2 border-b-2 border-primary dark:border-primary-dark sticky top-0 bg-gray-100 dark:bg-dark-bg z-10 text-gray-700 dark:text-gray-300 text-sm">
+                                {day}
+                            </div>
+                        ))}
+                        {calendarDays.map((day) => {
+                            const dateKey = formatDate(day);
+                            const dayBookings = bookingsByDate.get(dateKey) || [];
+                            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                            const isToday = formatDate(day) === formatDate(new Date());
+                            return (
+                                <button key={dateKey} onClick={() => handleDayClick(day)} className={`relative min-h-[90px] sm:min-h-[120px] p-1 border-r border-b border-gray-200 dark:border-dark-border group flex flex-col text-left ${isCurrentMonth ? 'bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
+                                    <div className={`flex items-center justify-center w-7 h-7 text-sm font-semibold rounded-full self-start ${isToday ? 'bg-primary text-white' : isCurrentMonth ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
+                                        {day.getDate()}
+                                    </div>
+                                    <div className="mt-1 space-y-1 overflow-y-auto max-h-[80px] flex-grow hidden sm:block">
+                                        {dayBookings.slice(0, 3).map(booking => {
+                                            const isOwnBooking = booking.userId === currentUser._id;
+                                            const isPending = booking.status === 'pending';
+                                            const isOverridden = booking.status === 'overridden';
+                                            let bgColor = 'bg-booked/80';
+                                            if (isPending) bgColor = 'bg-yellow-200/80';
+                                            if (isOwnBooking) bgColor = 'bg-secondary/80';
+                                            if (isOverridden) bgColor = 'bg-purple-400/80';
+                                            
+                                            return (
+                                                <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>
+                                                    <div className="flex items-center">
+                                                        <span className="font-semibold truncate">{booking.subject}</span>
+                                                    </div>
                                                 </div>
+                                            );
+                                        })}
+                                        {dayBookings.length > 3 && (
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 text-center font-semibold pt-1">
+                                                + {dayBookings.length - 3} more
                                             </div>
-                                        );
-                                    })}
-                                    {dayBookings.length > 3 && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center font-semibold pt-1">
-                                            + {dayBookings.length - 3} more
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-grow flex items-center justify-center sm:hidden">
-                                    {dayBookings.length > 0 && <div className="w-2 h-2 bg-primary rounded-full"></div>}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            ) : (
-                <>
-                    {/* Desktop Daily View */}
-                    <div className="hidden md:block overflow-x-auto">
-                        <div className="grid" style={{ gridTemplateColumns: `auto repeat(${classrooms.length}, minmax(140px, 1fr))` }}>
-                            {/* First row: empty corner + classroom headers */}
-                            <div className="sticky top-0 left-0 z-30 bg-gray-100 dark:bg-dark-bg border-b border-r border-gray-200 dark:border-dark-border"></div>
-                            {classrooms.map(cr => (
-                                <div key={cr._id} className="text-center font-semibold text-sm p-2 h-12 flex items-center justify-center border-b border-r border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card text-gray-700 dark:text-gray-200 sticky top-0 z-20">
-                                    {cr.name}
-                                </div>
-                            ))}
+                                        )}
+                                    </div>
+                                    <div className="flex-grow flex items-center justify-center sm:hidden">
+                                        {dayBookings.length > 0 && <div className="w-2 h-2 bg-primary rounded-full"></div>}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop Daily View */}
+                        <div className="hidden md:block">
+                            <div className="grid" style={{ gridTemplateColumns: `auto repeat(${classrooms.length}, minmax(140px, 1fr))` }}>
+                                {/* First row: empty corner + classroom headers */}
+                                <div className="sticky top-0 left-0 z-30 bg-gray-100 dark:bg-dark-bg border-b border-r border-gray-200 dark:border-dark-border"></div>
+                                {classrooms.map(cr => (
+                                    <div key={cr._id} className="text-center font-semibold text-sm p-2 h-12 flex items-center justify-center border-b border-r border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-card text-gray-700 dark:text-gray-200 sticky top-0 z-20">
+                                        {cr.name}
+                                    </div>
+                                ))}
 
-                            {/* Subsequent rows for each slot */}
-                            {ALL_DAY_SLOTS.map(slot => {
-                                if (slot.type === 'period') {
+                                {/* Subsequent rows for each slot */}
+                                {ALL_DAY_SLOTS.map(slot => {
+                                    if (slot.type === 'period') {
+                                        return (
+                                            <React.Fragment key={slot.startTime}>
+                                                {/* Time label */}
+                                                <div className="sticky left-0 bg-white dark:bg-dark-card h-28 flex flex-col items-center justify-center font-semibold text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2 z-10">
+                                                    <span className="text-xs">{formatTime12h(slot.startTime)}</span>
+                                                    <span className="my-1 text-xs text-gray-400">to</span>
+                                                    <span className="text-xs">{formatTime12h(slot.endTime)}</span>
+                                                </div>
+                                                {/* Booking cells */}
+                                                {classrooms.map(classroom => (
+                                                    <div key={`${classroom._id}-${slot.startTime}`} className="h-28 p-1 border-r border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
+                                                        {renderSlot(calendarDays[0], slot.startTime, classroom)}
+                                                    </div>
+                                                ))}
+                                            </React.Fragment>
+                                        );
+                                    }
+                                    // It's a break
+                                    const breakHeight = slot.name === 'Lunch' ? 'h-12' : 'h-8';
                                     return (
                                         <React.Fragment key={slot.startTime}>
-                                            {/* Time label */}
-                                            <div className="sticky left-0 bg-white dark:bg-dark-card h-28 flex flex-col items-center justify-center font-semibold text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-dark-border px-2 z-10">
-                                                <span className="text-xs">{formatTime12h(slot.startTime)}</span>
-                                                <span className="my-1 text-xs text-gray-400">to</span>
-                                                <span className="text-xs">{formatTime12h(slot.endTime)}</span>
+                                            {/* Time label for break */}
+                                            <div className={`sticky left-0 ${breakHeight} flex items-center justify-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-r border-b border-gray-200 dark:border-dark-border z-10`}>
+                                                {slot.name}
                                             </div>
-                                            {/* Booking cells */}
-                                            {classrooms.map(classroom => (
-                                                <div key={`${classroom._id}-${slot.startTime}`} className="h-28 p-1 border-r border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
-                                                    {renderSlot(calendarDays[0], slot.startTime, classroom)}
-                                                </div>
-                                            ))}
+                                            {/* Break cells */}
+                                            <div
+                                                className={`${breakHeight} bg-gray-50 dark:bg-gray-800/50 border-b border-r border-gray-200 dark:border-dark-border`}
+                                                style={{ gridColumn: `span ${classrooms.length}` }}
+                                            ></div>
                                         </React.Fragment>
                                     );
+                                })}
+                            </div>
+                        </div>
+                        {/* Mobile Daily View - Card Based */}
+                        <div className="md:hidden space-y-4 px-1">
+                            {mobileDailyViewClassroom ? ALL_DAY_SLOTS.map(slot => {
+                                if (slot.type === 'period') {
+                                    return (
+                                        <div key={slot.startTime} className="bg-white dark:bg-dark-card rounded-lg shadow p-3">
+                                            <div className="flex justify-between items-center mb-2 pb-2 border-b dark:border-dark-border">
+                                                <h4 className="font-bold text-gray-800 dark:text-white">Period {slot.period}</h4>
+                                                <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
+                                                    {formatTime12h(slot.startTime)} - {formatTime12h(slot.endTime)}
+                                                </span>
+                                            </div>
+                                            <div className="min-h-[80px]">
+                                                {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
+                                            </div>
+                                        </div>
+                                    )
                                 }
                                 // It's a break
-                                const breakHeight = slot.name === 'Lunch' ? 'h-12' : 'h-8';
                                 return (
-                                    <React.Fragment key={slot.startTime}>
-                                        {/* Time label for break */}
-                                        <div className={`sticky left-0 ${breakHeight} flex items-center justify-center text-xs text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-r border-b border-gray-200 dark:border-dark-border z-10`}>
-                                            {slot.name}
-                                        </div>
-                                        {/* Break cells */}
-                                        <div
-                                            className={`${breakHeight} bg-gray-50 dark:bg-gray-800/50 border-b border-r border-gray-200 dark:border-dark-border`}
-                                            style={{ gridColumn: `span ${classrooms.length}` }}
-                                        ></div>
-                                    </React.Fragment>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    {/* Mobile Daily View - Card Based */}
-                    <div className="md:hidden space-y-4 px-1">
-                        {mobileDailyViewClassroom ? ALL_DAY_SLOTS.map(slot => {
-                            if (slot.type === 'period') {
-                                return (
-                                    <div key={slot.startTime} className="bg-white dark:bg-dark-card rounded-lg shadow p-3">
-                                        <div className="flex justify-between items-center mb-2 pb-2 border-b dark:border-dark-border">
-                                            <h4 className="font-bold text-gray-800 dark:text-white">Period {slot.period}</h4>
-                                            <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
-                                                {formatTime12h(slot.startTime)} - {formatTime12h(slot.endTime)}
-                                            </span>
-                                        </div>
-                                        <div className="min-h-[80px]">
-                                            {renderSlot(calendarDays[0], slot.startTime, mobileDailyViewClassroom)}
-                                        </div>
+                                    <div key={slot.startTime} className="flex items-center justify-center py-1">
+                                        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider">{slot.name} Break</span>
                                     </div>
                                 )
-                            }
-                            // It's a break
-                            return (
-                                <div key={slot.startTime} className="flex items-center justify-center py-1">
-                                    <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider">{slot.name} Break</span>
-                                </div>
-                            )
-                        }) : <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
-                    </div>
-                </>
-            )}
+                            }) : <p className="text-center py-8 text-gray-500">No classrooms available to display.</p>}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     )
 }
