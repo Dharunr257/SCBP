@@ -5,7 +5,7 @@ interface IconProps {
 }
 
 export const CollegeLogo: React.FC<IconProps> = ({ className }) => (
-  <img src="https://i.ibb.co/tLW0m0C/f-X-Logo.png" alt="College Logo" className={className} />
+  <img src="/assets/logo.png" alt="College Logo" className={className} />
 );
 
 export const SunIcon: React.FC<IconProps> = ({ className }) => (
