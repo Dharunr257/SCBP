@@ -10,10 +10,12 @@ interface BookingCalendarProps {
   classrooms: Classroom[];
   users: User[];
   roomBlocks: RoomBlock[];
+  waitlist: WaitlistEntry[];
   onBookSlot: (slot: { date: string; startTime: string; classroomId: string }) => void;
   onEditBooking: (booking: Booking) => void;
   onDeleteBooking: (bookingId: string) => void;
   onOverrideBooking: (booking: Booking) => void;
+  onJoinWaitlist: (slot: { date: string; period: number; classroomId: string; }) => void;
 }
 
 type CalendarView = 'Daily' | 'Monthly';
@@ -61,7 +63,7 @@ const canOverrideBooking = (currentUser: User, booking: Booking, users: User[]):
     return rolePower[currentUser.role] > rolePower[bookingOwner.role];
 };
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, onBookSlot, onEditBooking, onDeleteBooking, onOverrideBooking }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings, classrooms, users, roomBlocks, waitlist, onBookSlot, onEditBooking, onDeleteBooking, onOverrideBooking, onJoinWaitlist }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<CalendarView>('Daily');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -206,10 +208,23 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
             const canOverride = canOverrideBooking(currentUser, bookingToConsider, users);
             const isPending = bookingToConsider.status === 'pending';
             const isActionsVisible = showActionsForBooking === bookingToConsider._id;
+            
+            const isConfirmedOrOverridden = bookingToConsider.status === 'confirmed' || bookingToConsider.status === 'overridden';
+            const isAlreadyOnWaitlist = waitlist.some(entry => 
+                entry.userId === currentUser._id &&
+                entry.classroomId === classroom._id &&
+                entry.date === dateStr &&
+                period && entry.period === period.period
+            );
 
-            let bookingColor = isPending ? 'bg-yellow-500' : 'bg-booked';
-            if (isOwner) bookingColor = 'bg-secondary';
-            if (bookingToConsider.status === 'overridden') bookingColor = 'bg-purple-500';
+            let bookingColor = 'bg-booked';
+            if (isPending) {
+                bookingColor = 'bg-yellow-500';
+            } else if (bookingToConsider.status === 'overridden') {
+                bookingColor = 'bg-purple-500';
+            } else if (isOwner) {
+                bookingColor = 'bg-secondary';
+            }
             
             return (
                 <div className="relative h-full" onClick={() => setShowActionsForBooking(prev => prev === bookingToConsider._id ? null : bookingToConsider._id)}>
@@ -231,8 +246,22 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                             </>
                         )}
                         {canOverride && !isPending && <button onClick={(e) => { e.stopPropagation(); onOverrideBooking(bookingToConsider); }} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold">Override</button>}
-                         {isPending && currentUser.role !== UserRole.Faculty && <button onClick={(e) => { e.stopPropagation(); onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id }); }} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold">Request Slot</button>}
-                         <button onClick={(e) => { e.stopPropagation(); setShowActionsForBooking(null); }} className="mt-2 text-white text-xs underline">Close</button>
+                        {isPending && currentUser.role !== UserRole.Faculty && <button onClick={(e) => { e.stopPropagation(); onBookSlot({ date: dateStr, startTime: time, classroomId: classroom._id }); }} className="w-full text-center py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold">Request Slot</button>}
+                        {!isOwner && isConfirmedOrOverridden && !isAlreadyOnWaitlist && (
+                            <button onClick={(e) => { 
+                                e.stopPropagation();
+                                if (period) {
+                                    onJoinWaitlist({ date: dateStr, period: period.period, classroomId: classroom._id });
+                                }
+                                setShowActionsForBooking(null);
+                            }} className="w-full text-center py-1.5 px-2 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold flex items-center justify-center">
+                                <ClipboardListIcon className="w-3 h-3 mr-1.5" /> Join Waitlist
+                            </button>
+                        )}
+                        {isAlreadyOnWaitlist && (
+                            <div className="text-xs text-orange-300 font-semibold py-1.5 px-2 text-center">You are on the waitlist for this slot.</div>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); setShowActionsForBooking(null); }} className="mt-2 text-white text-xs underline">Close</button>
                     </div>
                 </div>
             );
@@ -359,10 +388,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                                             const isOwnBooking = booking.userId === currentUser._id;
                                             const isPending = booking.status === 'pending';
                                             const isOverridden = booking.status === 'overridden';
+                                            
                                             let bgColor = 'bg-booked/80';
-                                            if (isPending) bgColor = 'bg-yellow-200/80';
-                                            if (isOwnBooking) bgColor = 'bg-secondary/80';
-                                            if (isOverridden) bgColor = 'bg-purple-400/80';
+                                            if (isPending) {
+                                                bgColor = 'bg-yellow-200/80';
+                                            } else if (isOverridden) {
+                                                bgColor = 'bg-purple-400/80';
+                                            } else if (isOwnBooking) {
+                                                bgColor = 'bg-secondary/80';
+                                            }
                                             
                                             return (
                                                 <div key={booking._id} className={`p-1 rounded text-xs text-black truncate ${bgColor}`}>

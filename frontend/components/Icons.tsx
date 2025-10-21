@@ -5,9 +5,7 @@ interface IconProps {
 }
 
 export const CollegeLogo: React.FC<IconProps> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2 13.05l10 6.03 10-6.03v-3.09l-10 6.03-10-6.03v3.09zm10-9.08L2 10.01v3.09l10-6.04 10 6.04v-3.09L12 3.97z"/>
-  </svg>
+  <img src="https://i.ibb.co/tLW0m0C/f-X-Logo.png" alt="College Logo" className={className} />
 );
 
 export const SunIcon: React.FC<IconProps> = ({ className }) => (

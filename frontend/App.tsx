@@ -233,7 +233,7 @@ const App: React.FC = () => {
 
     const handleJoinWaitlist = async (waitlistData: Omit<WaitlistEntry, '_id' | 'userId' | 'timestamp'>): Promise<boolean> => {
         try {
-            await axiosInstance.post('/waitlist', waitlistData);
+            await axiosInstance.post('/waitlist', { ...waitlistData, userId: currentUser?._id });
             await fetchAllData();
             showToast('Successfully joined the waitlist!', 'success');
             setIsWaitlistModalOpen(false);
@@ -494,10 +494,12 @@ const App: React.FC = () => {
                     classrooms={classrooms}
                     users={users}
                     roomBlocks={roomBlocks}
+                    waitlist={waitlist}
                     onBookSlot={handleOpenBookingModal}
                     onEditBooking={handleEditBooking}
                     onDeleteBooking={handleDeleteBooking}
                     onOverrideBooking={handleOverrideBooking}
+                    onJoinWaitlist={handleOpenWaitlistModal}
                 />;
              case 'Approval Requests':
                 return <ApprovalRequests
