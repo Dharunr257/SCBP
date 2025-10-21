@@ -23,7 +23,7 @@ export const getAllData = async (req, res) => {
                 status: { $in: ['confirmed', 'overridden'] },
                 $or: [
                     { date: { $lt: todayStr } },
-                    { date: todayStr, endTime: { $lt: currentTimeStr } }
+                    { date: todayStr, endTime: { $lte: currentTimeStr } }
                 ]
             },
             { $set: { status: 'completed' } }

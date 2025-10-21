@@ -42,8 +42,8 @@ const BookingRecordDetailsCard: React.FC<{ bookings: Booking[], users: User[], c
 
         return records
             .filter(b => new Date(b.createdAt) >= twoMonthsAgo && b.status === 'completed')
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 5) // Show top 5 recent for dashboard
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .slice(-5) // Show last 5 recent for dashboard
             .map((b, index) => {
                 const user = users.find(u => u._id === b.userId);
                 const [y, m, d] = b.date.split('-').map(Number);

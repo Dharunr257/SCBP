@@ -1,6 +1,6 @@
 
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Booking, User, Classroom, UserRole } from '../types';
 import { DownloadIcon } from '../components/Icons';
 import { formatTime12h } from '../constants';
@@ -20,6 +20,11 @@ const ReportCard: React.FC<{ title: string; children: React.ReactNode }> = ({ ti
 );
 
 const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentUser }) => {
+    const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+    const [sortBy, setSortBy] = useState('bookingOn_asc');
+
+    const departments = useMemo(() => [...new Set(users.map(u => u.department).sort())], [users]);
 
     const filteredBookings = useMemo(() => {
         if (currentUser.role === UserRole.HOD) {
@@ -76,26 +81,63 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
         const twoMonthsAgo = new Date();
         twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
-        return filteredBookings
+        const baseRecords = filteredBookings
             .filter(b => b.status === 'completed' && new Date(b.createdAt) >= twoMonthsAgo)
-            .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map((b, index) => {
+            .map(b => {
                 const user = users.find(u => u._id === b.userId);
+                const [y, m, d] = b.date.split('-').map(Number);
+                const classDate = new Date(y, m - 1, d);
                 return {
                     _id: b._id,
-                    'S.NO': index + 1,
-                    'Staff Name': b.staffName,
-                    'Subject': b.subject,
-                    'Department': user?.department || 'N/A',
-                    'Contact No': b.contactNo,
-                    'Booking On': new Date(b.createdAt).toLocaleString(),
-                    'Class Conducting On': `${new Date(b.date).toLocaleDateString()} ${formatTime12h(b.startTime)}`,
-                    'Hour No': b.period,
-                    'Starting Time': formatTime12h(b.startTime),
-                    'Ending Time': formatTime12h(b.endTime),
+                    booking: b,
+                    user,
+                    classDate,
                 };
             });
-    }, [filteredBookings, users]);
+
+        const filtered = baseRecords.filter(r => {
+            if (departmentFilter !== 'all' && r.user?.department !== departmentFilter) return false;
+            if (dateRange.start && r.classDate < new Date(dateRange.start)) return false;
+            if (dateRange.end) {
+                const endDate = new Date(dateRange.end);
+                endDate.setHours(23, 59, 59, 999);
+                if (r.classDate > endDate) return false;
+            }
+            return true;
+        });
+
+        const [sortKey, sortDir] = sortBy.split('_');
+        const sorted = [...filtered].sort((a, b) => {
+            let valA: any, valB: any;
+            if (sortKey === 'bookingOn') {
+                valA = new Date(a.booking.createdAt);
+                valB = new Date(b.booking.createdAt);
+            } else if (sortKey === 'classOn') {
+                valA = a.classDate;
+                valB = b.classDate;
+            } else {
+                valA = a.user?.department || '';
+                valB = b.user?.department || '';
+            }
+            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return sorted.map((r, index) => ({
+            _id: r._id,
+            'S.NO': index + 1,
+            'Staff Name': r.booking.staffName,
+            'Subject': r.booking.subject,
+            'Department': r.user?.department || 'N/A',
+            'Contact No': r.booking.contactNo,
+            'Booking On': new Date(r.booking.createdAt).toLocaleString(),
+            'Class Conducting On': `${r.classDate.toLocaleDateString()} ${formatTime12h(r.booking.startTime)}`,
+            'Hour No': r.booking.period,
+            'Starting Time': formatTime12h(r.booking.startTime),
+            'Ending Time': formatTime12h(r.booking.endTime),
+        }));
+    }, [filteredBookings, users, departmentFilter, dateRange, sortBy]);
     
     const handleExport = (data: any[], filename: string) => {
         if (data.length === 0) {
@@ -125,7 +167,7 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
             </div>
         )}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
           <ReportCard title="Department Usage (Hours)">
               <button onClick={() => handleExport(departmentUsage.map(([dept, hours])=>({Department: dept, Hours: hours.toFixed(1)})), 'department_usage')} className="float-right -mt-12 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"><DownloadIcon className="w-5 h-5"/></button>
               <ul className="space-y-2">
@@ -164,6 +206,36 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                   ))}
               </div>
           </ReportCard>
+        </div>
+        
+        <div className="bg-white dark:bg-dark-card rounded-lg shadow-md p-4 mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-center">
+            <div className="flex-1 min-w-[150px]">
+                <label htmlFor="dept-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                <select id="dept-filter" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="mt-1 block w-full p-2 border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                    <option value="all">All Departments</option>
+                    {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                </select>
+            </div>
+            <div className="flex-1 min-w-[150px]">
+                <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">From Class Date</label>
+                <input type="date" id="start-date" value={dateRange.start} onChange={e => setDateRange(prev => ({...prev, start: e.target.value}))} className="mt-1 block w-full p-2 border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary" />
+            </div>
+            <div className="flex-1 min-w-[150px]">
+                <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">To Class Date</label>
+                <input type="date" id="end-date" value={dateRange.end} onChange={e => setDateRange(prev => ({...prev, end: e.target.value}))} className="mt-1 block w-full p-2 border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary" />
+            </div>
+            <div className="flex-1 min-w-[150px]">
+                <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Sort By</label>
+                <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)} className="mt-1 block w-full p-2 border-gray-300 dark:bg-gray-700 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary">
+                    <option value="bookingOn_asc">Booking Date (Oldest)</option>
+                    <option value="bookingOn_desc">Booking Date (Newest)</option>
+                    <option value="classOn_asc">Class Date (Oldest)</option>
+                    <option value="classOn_desc">Class Date (Newest)</option>
+                    <option value="department_asc">Department (A-Z)</option>
+                    <option value="department_desc">Department (Z-A)</option>
+                </select>
+            </div>
+        </div>
 
           <div className="col-span-1 lg:col-span-2 xl:col-span-3">
             <ReportCard title="Booking Record Details (Last 2 Months)">
@@ -221,14 +293,12 @@ const Reports: React.FC<ReportsProps> = ({ bookings, users, classrooms, currentU
                         </>
                     ) : (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            No completed booking records found for the last 2 months.
+                            No completed booking records found for the last 2 months matching your criteria.
                         </div>
                     )}
                 </div>
             </ReportCard>
         </div>
-
-      </div>
     </div>
   );
 };
