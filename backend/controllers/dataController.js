@@ -1,5 +1,4 @@
 
-
 import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notification, Setting } from '../models.js';
 
 // @desc    Fetch all application data
@@ -8,12 +7,20 @@ import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notific
 export const getAllData = async (req, res) => {
     try {
         // Automatically mark past confirmed bookings as 'completed'
+        // This logic assumes the application operates in a single timezone, India Standard Time (UTC+5:30),
+        // to correct for server time differences (e.g., server running in UTC).
         const now = new Date();
-        const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
+
+        // Convert current time to IST (UTC+5:30) by adding a 5.5-hour offset to the UTC time.
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istNow = new Date(now.getTime() + istOffset);
+
+        // Use UTC methods on the offset date to get the correct date/time components for IST.
+        const year = istNow.getUTCFullYear();
+        const month = (istNow.getUTCMonth() + 1).toString().padStart(2, '0');
+        const day = istNow.getUTCDate().toString().padStart(2, '0');
+        const hours = istNow.getUTCHours().toString().padStart(2, '0');
+        const minutes = istNow.getUTCMinutes().toString().padStart(2, '0');
         
         const todayStr = `${year}-${month}-${day}`;
         const currentTimeStr = `${hours}:${minutes}`;
