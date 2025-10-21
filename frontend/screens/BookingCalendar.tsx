@@ -271,10 +271,23 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     return (
         <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
-            <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <div className="w-full flex justify-between items-center">
+            <div className="mb-6 space-y-4 md:space-y-0 md:flex md:justify-between md:items-center">
+                {/* Container for Title and Mobile Toggle */}
+                <div className="flex justify-between items-center md:block">
                     <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white flex-shrink-0">Bookings</h2>
-                    <div className="flex items-center space-x-1 md:space-x-4">
+                    
+                    {/* Mobile Toggle */}
+                    <div className="md:hidden bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
+                        <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
+                        <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+                    </div>
+                </div>
+                
+                {/* Container for Date Selector and Desktop Toggle */}
+                <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
+                    
+                    {/* Date Selector */}
+                    <div className="flex items-center space-x-1 self-center">
                         <button onClick={() => handleDateChange(-1)} 
                             disabled={isPrevDisabled}
                             className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -308,10 +321,12 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                             <ChevronRightIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
                         </button>
                     </div>
-                </div>
-                 <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md self-center md:self-auto">
-                    <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
-                    <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+
+                    {/* Desktop Toggle */}
+                    <div className="hidden md:block bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
+                        <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
+                        <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+                    </div>
                 </div>
             </div>
             {view === 'Daily' && (
