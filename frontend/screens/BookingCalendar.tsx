@@ -309,7 +309,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
                     </button>
                 </div>
 
-                <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md flex-1 flex justify-end">
+                <div className="bg-white dark:bg-dark-card p-1 rounded-lg shadow-md flex flex justify-end">
                     <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
                     <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
                 </div>
