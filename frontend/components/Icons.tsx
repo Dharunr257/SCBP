@@ -1,11 +1,12 @@
 import React from 'react';
+import logoUrl from '../assets/logo.png';
 
 interface IconProps {
   className?: string;
 }
 
 export const CollegeLogo: React.FC<IconProps> = ({ className }) => (
-  <img src="/assets/logo.png" alt="College Logo" className={className} />
+  <img src={logoUrl} alt="College Logo" className={className} />
 );
 
 export const SunIcon: React.FC<IconProps> = ({ className }) => (

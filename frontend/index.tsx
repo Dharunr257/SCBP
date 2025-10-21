@@ -1,6 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import faviconUrl from './assets/logo.png';
+
+// Set favicon dynamically so Vite can handle the asset path
+const faviconLink = document.createElement('link');
+faviconLink.rel = 'icon';
+faviconLink.href = faviconUrl;
+document.head.appendChild(faviconLink);
+
 
 function renderApp() {
   const rootElement = document.getElementById('root');
