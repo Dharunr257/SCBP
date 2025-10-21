@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Booking, Classroom, User, UserRole, WaitlistEntry, RoomBlock } from '../types';
 import { ALL_DAY_SLOTS, PERIODS, formatTime12h } from '../constants';
@@ -271,62 +272,56 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ currentUser, bookings
 
     return (
         <div className="p-4 md:p-6 bg-gray-100 dark:bg-dark-bg h-full flex flex-col">
-            <div className="mb-6 space-y-4 md:space-y-0 md:flex md:justify-between md:items-center">
-                {/* Container for Title and Mobile Toggle */}
-                <div className="flex justify-between items-center md:block">
-                    <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white flex-shrink-0">Bookings</h2>
-                    
-                    {/* Mobile Toggle */}
-                    <div className="md:hidden bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
-                        <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
-                        <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
-                    </div>
-                </div>
-                
-                {/* Container for Date Selector and Desktop Toggle */}
-                <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
-                    
-                    {/* Date Selector */}
-                    <div className="flex items-center space-x-1 self-center">
-                        <button onClick={() => handleDateChange(-1)} 
-                            disabled={isPrevDisabled}
-                            className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Previous period"
-                        >
-                            <ChevronLeftIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
-                        </button>
-                        <div className="relative">
-                           <button
-                                onClick={() => setIsDatePickerOpen(true)}
-                                className="font-semibold text-base md:text-lg text-center text-gray-700 dark:text-gray-200 md:min-w-[240px] px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                aria-label="Select date"
-                            >
-                                {renderHeader()}
-                            </button>
-                            {isDatePickerOpen && (
-                                <DatePicker
-                                    selectedDate={currentDate}
-                                    onChange={handleDateSelect}
-                                    minDate={today}
-                                    maxDate={maxDate}
-                                    onClose={() => setIsDatePickerOpen(false)}
-                                />
-                            )}
-                        </div>
-                        <button onClick={() => handleDateChange(1)} 
-                            disabled={isNextDisabled}
-                            className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Next period"
-                        >
-                            <ChevronRightIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
-                        </button>
-                    </div>
+            <div className="flex flex-wrap justify-between items-center mb-6 gap-y-4">
+                {/* Title */}
+                <h2 className="text-xl md:text-3xl font-bold text-gray-800 dark:text-white">Bookings</h2>
 
-                    {/* Desktop Toggle */}
-                    <div className="hidden md:block bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
-                        <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
-                        <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+                {/* Mobile Toggle */}
+                <div className="md:hidden bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
+                    <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
+                    <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
+                </div>
+
+                {/* Date Selector (centered on mobile, in the middle on desktop) */}
+                <div className="flex items-center space-x-1 w-full md:w-auto justify-center">
+                    <button onClick={() => handleDateChange(-1)} 
+                        disabled={isPrevDisabled}
+                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Previous period"
+                    >
+                        <ChevronLeftIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
+                    </button>
+                    <div className="relative">
+                       <button
+                            onClick={() => setIsDatePickerOpen(true)}
+                            className="font-semibold text-base md:text-lg text-center text-gray-700 dark:text-gray-200 md:min-w-[240px] px-2 py-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            aria-label="Select date"
+                        >
+                            {renderHeader()}
+                        </button>
+                        {isDatePickerOpen && (
+                            <DatePicker
+                                selectedDate={currentDate}
+                                onChange={handleDateSelect}
+                                minDate={today}
+                                maxDate={maxDate}
+                                onClose={() => setIsDatePickerOpen(false)}
+                            />
+                        )}
                     </div>
+                    <button onClick={() => handleDateChange(1)} 
+                        disabled={isNextDisabled}
+                        className="p-2 rounded-full bg-white dark:bg-dark-card shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Next period"
+                    >
+                        <ChevronRightIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-600 dark:text-gray-300"/>
+                    </button>
+                </div>
+
+                {/* Desktop Toggle */}
+                <div className="hidden md:block bg-white dark:bg-dark-card p-1 rounded-lg shadow-md">
+                    <button onClick={() => setView('Daily')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Daily' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Daily</button>
+                    <button onClick={() => setView('Monthly')} className={`px-4 py-1 text-sm font-semibold rounded-md ${view === 'Monthly' ? 'bg-primary text-white' : 'text-gray-600 dark:text-gray-300'}`}>Monthly</button>
                 </div>
             </div>
             {view === 'Daily' && (
