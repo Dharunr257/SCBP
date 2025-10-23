@@ -6,17 +6,30 @@ import bcrypt from 'bcryptjs';
 import { User, Classroom, Booking, WaitlistEntry, RoomBlock, HistoryLog, Notification, Setting } from './models.js';
 
 const users = [
-    { name: 'Dr. Evelyn Reed', role: 'Principal', department: 'Administration', email: 'principal@college.edu', password: 'password123' },
-    { name: 'Dr. Samuel Chen', role: 'Dean', department: 'Academics', email: 'dean@college.edu', password: 'password123', isIqacDean: true },
-    { name: 'Prof. Aisha Khan', role: 'HOD', department: 'Computer Science', email: 'hod.cs@college.edu', password: 'password123' },
-    { name: 'General Faculty', role: 'Faculty', department: 'General', email: 'faculty@college.edu', password: 'password123' },
+    { name: 'Dr. Senthil kumar', role: 'Principal', department: 'Administration', email: 'principal@pmctech.org', password: 'password123' },
+    { name: 'Dr. Gnana Sekhar', role: 'Dean IQAC', department: 'IQAC', email: 'dean.iqac@pmctech.org', password: 'password123', isIqacDean: true },
+    { name: 'General Faculty', role: 'Faculty', department: 'General', email: 'faculty@pmctech.org', password: 'password123' },
+    { name: 'HOD of AI and DS', role: 'HOD', department: 'AI and DS', email: 'hod.aiandds@pmctech.org', password: 'password123' },
+    { name: 'HOD of CSBS', role: 'HOD', department: 'CSBS', email: 'hod.csbs@pmctech.org', password: 'password123' },
+    { name: 'HOD of SH V2', role: 'HOD', department: 'SH V2', email: 'hod.shv2@pmctech.org', password: 'password123' },
+    { name: 'HOD of SH V3', role: 'HOD', department: 'SH V3', email: 'hod.shv3@pmctech.org', password: 'password123' },
+    { name: 'HOD of Chemistry', role: 'HOD', department: 'Chemistry', email: 'hod.chem@pmctech.org', password: 'password123' },
+    { name: 'HOD of Aeronautical', role: 'HOD', department: 'Aeronautical', email: 'hod.aero@pmctech.org', password: 'password123' },
+    { name: 'HOD of Civil', role: 'HOD', department: 'Civil', email: 'hod.civil@pmctech.org', password: 'password123' },
+    { name: 'HOD of CSE', role: 'HOD', department: 'CSE', email: 'hod.cse@pmctech.org', password: 'password123' },
+    { name: 'HOD of ECE', role: 'HOD', department: 'ECE', email: 'hod.ece@pmctech.org', password: 'password123' },
+    { name: 'HOD of EEE', role: 'HOD', department: 'EEE', email: 'hod.eee@pmctech.org', password: 'password123' },
+    { name: 'HOD of IT', role: 'HOD', department: 'IT', email: 'hod.it@pmctech.org', password: 'password123' },
+    { name: 'HOD of MBA', role: 'HOD', department: 'MBA', email: 'hod.mba@pmctech.org', password: 'password123' },
+    { name: 'HOD of MCA', role: 'HOD', department: 'MCA', email: 'hod.mca@pmctech.org', password: 'password123' },
+    { name: 'HOD of MCO', role: 'HOD', department: 'MCO', email: 'hod.mco@pmctech.org', password: 'password123' },
+    { name: 'HOD of Mechanical', role: 'HOD', department: 'Mechanical', email: 'hod.mech@pmctech.org', password: 'password123' },
+    { name: 'HOD of Science and Humanities', role: 'HOD', department: 'Science and Humanities', email: 'hod.sh@pmctech.org', password: 'password123' },
 ];
 
 const classrooms = [
-    { name: 'Seminar Hall A', status: 'available' },
-    { name: 'Smart Room 101', status: 'available' },
-    { name: 'Smart Room 102', status: 'maintenance' },
-    { name: 'Digital Lab', status: 'available' },
+    { name: 'IQAC Smart Classroom', status: 'available' },
+    { name: 'CSE Smart classroom', status: 'available' },
 ];
 
 
